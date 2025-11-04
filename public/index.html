@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>WebGPU Black Hole Simulator</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="main-content">
+        <div class="canvas-section">
+          <div class="canvas-wrapper">
+            <div class="canvas-info-message">Drag to rotate camera</div>
+            <div class="canvas-container">
+              <canvas id="cvBlackhole"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls-section">
+          <div class="controls-column">
+            <form>
+              <fieldset>
+                <h3>Performance</h3>
+
+                <div id="performanceStats" style="margin-bottom: 15px">
+                  <div
+                    id="fpsText"
+                    style="font-weight: bold; margin-bottom: 5px"
+                  >
+                    FPS: --
+                  </div>
+                  <div
+                    id="timingDisplay"
+                    style="font-size: 0.9em; line-height: 1.6"
+                  >
+                    <span class="timing-text vram-time">VRAM: -- MB</span><br />
+                    <span class="timing-text cpu-time">CPU: -- ms</span><br />
+                    <span class="timing-text gpu-time">GPU: -- ms</span><br />
+                    <span class="timing-text main-time">Main: -- ms</span><br />
+                    <span class="timing-text post-time">Post: -- ms</span>
+                  </div>
+                </div>
+
+                <div class="slider">
+                  <label for="slMaxFrameRate">frame rate limit</label><br />
+                  <input
+                    type="range"
+                    min="1"
+                    max="120"
+                    step="1"
+                    class="slider"
+                    id="slMaxFrameRate"
+                    title="Set to 120 for unlocked frame rate and accurate GPU timing"
+                  />
+                  <span id="labelMaxFrameRate"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slAnimationSpeed">animation speed</label><br />
+                  <input
+                    type="range"
+                    min="0"
+                    max="5"
+                    step="0.1"
+                    class="slider"
+                    id="slAnimationSpeed"
+                  />
+                  <span id="labelAnimationSpeed"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slTemporalAAFrames">temporal AA frames</label
+                  ><br />
+                  <input
+                    type="range"
+                    min="1"
+                    max="100"
+                    step="1"
+                    class="slider"
+                    id="slTemporalAAFrames"
+                  />
+                  <span id="labelTemporalAAFrames"></span> frames
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <h3>Raymarching</h3>
+                <div class="slider">
+                  <label for="slIterations">iterations</label><br />
+                  <input
+                    type="range"
+                    min="10"
+                    max="100"
+                    step="1"
+                    class="slider"
+                    id="slIterations"
+                  />
+                  <span id="labelIterations"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slWarpAmount">warp amount</label><br />
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    step="0.1"
+                    class="slider"
+                    id="slWarpAmount"
+                  />
+                  <span id="labelWarpAmount"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slBrightnessFactor">brightness factor</label
+                  ><br />
+                  <input
+                    type="range"
+                    min="1"
+                    max="500"
+                    step="10"
+                    class="slider"
+                    id="slBrightnessFactor"
+                  />
+                  <span id="labelBrightnessFactor"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slStepMinScale">step min scale</label><br />
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="1.0"
+                    step="0.05"
+                    class="slider"
+                    id="slStepMinScale"
+                  />
+                  <span id="labelStepMinScale"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slStepMaxScale">step max scale</label><br />
+                  <input
+                    type="range"
+                    min="1.0"
+                    max="3.0"
+                    step="0.05"
+                    class="slider"
+                    id="slStepMaxScale"
+                  />
+                  <span id="labelStepMaxScale"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slStepNearFactor">step near factor</label><br />
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="1.0"
+                    step="0.05"
+                    class="slider"
+                    id="slStepNearFactor"
+                  />
+                  <span id="labelStepNearFactor"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slStepFarFactor">step far factor</label><br />
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2.0"
+                    step="0.05"
+                    class="slider"
+                    id="slStepFarFactor"
+                  />
+                  <span id="labelStepFarFactor"></span>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <h3>Black Hole Rotation</h3>
+                <div class="slider">
+                  <label for="slBlackholeRotationX">rotation X (degrees)</label
+                  ><br />
+                  <input
+                    type="range"
+                    min="-180"
+                    max="180"
+                    step="1"
+                    class="slider"
+                    id="slBlackholeRotationX"
+                  />
+                  <span id="labelBlackholeRotationX"></span>°
+                </div>
+
+                <div class="slider">
+                  <label for="slBlackholeRotationY">rotation Y (degrees)</label
+                  ><br />
+                  <input
+                    type="range"
+                    min="-180"
+                    max="180"
+                    step="1"
+                    class="slider"
+                    id="slBlackholeRotationY"
+                  />
+                  <span id="labelBlackholeRotationY"></span>°
+                </div>
+
+                <div class="slider">
+                  <label for="slBlackholeRotationZ">rotation Z (degrees)</label
+                  ><br />
+                  <input
+                    type="range"
+                    min="-180"
+                    max="180"
+                    step="1"
+                    class="slider"
+                    id="slBlackholeRotationZ"
+                  />
+                  <span id="labelBlackholeRotationZ"></span>°
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <h3>Accretion Disc</h3>
+                <div class="slider">
+                  <label for="slDiscRadius">disc radius</label><br />
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    step="0.1"
+                    class="slider"
+                    id="slDiscRadius"
+                  />
+                  <span id="labelDiscRadius"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slDiscWidth">disc width</label><br />
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    step="0.1"
+                    class="slider"
+                    id="slDiscWidth"
+                  />
+                  <span id="labelDiscWidth"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slDiscSpeed">disc speed</label><br />
+                  <input
+                    type="range"
+                    min="0"
+                    max="0.2"
+                    step="0.01"
+                    class="slider"
+                    id="slDiscSpeed"
+                  />
+                  <span id="labelDiscSpeed"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slDiscBrightness">disc brightness</label><br />
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="20"
+                    step="0.1"
+                    class="slider"
+                    id="slDiscBrightness"
+                  />
+                  <span id="labelDiscBrightness"></span>
+                </div>
+
+                <div class="slider">
+                  <label>
+                    <input type="checkbox" id="cbEnableColorization" checked />
+                    Enable Colorization (uncheck for grayscale debug)
+                  </label>
+                </div>
+
+                <div class="slider">
+                  <label for="colorPreset">color preset</label><br />
+                  <select
+                    id="colorPreset"
+                    style="
+                      width: 200px;
+                      padding: 5px;
+                      background: #333;
+                      color: #ddd;
+                      border: 1px solid #444;
+                      border-radius: 4px;
+                    "
+                  >
+                    <option value="classic">
+                      Classic (Yellow-White-Orange)
+                    </option>
+                    <option value="cosmic">Cosmic Blue</option>
+                    <option value="toxic">Toxic Green</option>
+                    <option value="inferno">Inferno Red</option>
+                    <option value="purple">Purple Nebula</option>
+                    <option value="ice">Ice Cold</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+
+                <div class="slider">
+                  <label for="centerColor">center color</label><br />
+                  <input type="color" id="centerColor" value="#ffffcc" />
+                  <button id="resetCenterColor" class="reset-btn">Reset</button>
+                </div>
+
+                <div class="slider">
+                  <label for="discInnerColor">disc inner color</label><br />
+                  <input type="color" id="discInnerColor" value="#ffe680" />
+                  <button id="resetDiscInnerColor" class="reset-btn">
+                    Reset
+                  </button>
+                </div>
+
+                <div class="slider">
+                  <label for="discOuterColor">disc outer color</label><br />
+                  <input type="color" id="discOuterColor" value="#ff8033" />
+                  <button id="resetDiscOuterColor" class="reset-btn">
+                    Reset
+                  </button>
+                </div>
+
+                <div class="slider">
+                  <label for="backgroundTint">background tint</label><br />
+                  <input type="color" id="backgroundTint" value="#000000" />
+                  <button id="resetBackgroundTint" class="reset-btn">
+                    Reset
+                  </button>
+                </div>
+
+                <div class="slider">
+                  <label for="slColorIntensity">color intensity</label><br />
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="1.5"
+                    step="0.01"
+                    class="slider"
+                    id="slColorIntensity"
+                  />
+                  <span id="labelColorIntensity"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slColorOuterToInnerPoint">outer → inner transition</label><br />
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    class="slider"
+                    id="slColorOuterToInnerPoint"
+                  />
+                  <span id="labelColorOuterToInnerPoint"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slColorInnerToCenterPoint">inner → center transition</label><br />
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    class="slider"
+                    id="slColorInnerToCenterPoint"
+                  />
+                  <span id="labelColorInnerToCenterPoint"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slWhitePoint">white point</label><br />
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    class="slider"
+                    id="slWhitePoint"
+                  />
+                  <span id="labelWhitePoint"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slBlackPoint">black point</label><br />
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    class="slider"
+                    id="slBlackPoint"
+                  />
+                  <span id="labelBlackPoint"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slTransparencyStart">transparency start</label
+                  ><br />
+                  <input
+                    type="range"
+                    min="0"
+                    max="3"
+                    step="0.1"
+                    class="slider"
+                    id="slTransparencyStart"
+                  />
+                  <span id="labelTransparencyStart"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slTransparencyEnd">transparency end</label><br />
+                  <input
+                    type="range"
+                    min="0"
+                    max="3"
+                    step="0.1"
+                    class="slider"
+                    id="slTransparencyEnd"
+                  />
+                  <span id="labelTransparencyEnd"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slDiscInnerFalloff">disc inner falloff</label
+                  ><br />
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="10"
+                    step="0.1"
+                    class="slider"
+                    id="slDiscInnerFalloff"
+                  />
+                  <span id="labelDiscInnerFalloff"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slDiscOuterFalloff">disc outer falloff</label
+                  ><br />
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="3"
+                    step="0.1"
+                    class="slider"
+                    id="slDiscOuterFalloff"
+                  />
+                  <span id="labelDiscOuterFalloff"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slDiscTexturePower">disc texture power</label
+                  ><br />
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="5"
+                    step="0.1"
+                    class="slider"
+                    id="slDiscTexturePower"
+                  />
+                  <span id="labelDiscTexturePower"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slDiscMinCoverage">disc min coverage</label><br />
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    class="slider"
+                    id="slDiscMinCoverage"
+                  />
+                  <span id="labelDiscMinCoverage"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slDiscOuterTransparency"
+                    >disc outer transparency</label
+                  ><br />
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    class="slider"
+                    id="slDiscOuterTransparency"
+                  />
+                  <span id="labelDiscOuterTransparency"></span>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <h3>HDR & Bloom</h3>
+                <div class="slider">
+                  <label for="slExposure">exposure</label><br />
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="3"
+                    step="0.1"
+                    class="slider"
+                    id="slExposure"
+                  />
+                  <span id="labelExposure"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slSaturation">saturation</label><br />
+                  <input
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.05"
+                    class="slider"
+                    id="slSaturation"
+                  />
+                  <span id="labelSaturation"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slBloomIntensity">bloom intensity</label><br />
+                  <input
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.05"
+                    class="slider"
+                    id="slBloomIntensity"
+                  />
+                  <span id="labelBloomIntensity"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slBloomThreshold">bloom threshold</label><br />
+                  <input
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.05"
+                    class="slider"
+                    id="slBloomThreshold"
+                  />
+                  <span id="labelBloomThreshold"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slShadowLift">shadow lift</label><br />
+                  <input
+                    type="range"
+                    min="0"
+                    max="0.5"
+                    step="0.01"
+                    class="slider"
+                    id="slShadowLift"
+                  />
+                  <span id="labelShadowLift"></span>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <h3>Tone Mapping</h3>
+                <div class="slider">
+                  <label for="slToneMapToe">toe (shadows)</label><br />
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    class="slider"
+                    id="slToneMapToe"
+                  />
+                  <span id="labelToneMapToe"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slToneMapHighlights">highlights</label><br />
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="1.5"
+                    step="0.05"
+                    class="slider"
+                    id="slToneMapHighlights"
+                  />
+                  <span id="labelToneMapHighlights"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slToneMapMidtones">midtones</label><br />
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="1.5"
+                    step="0.05"
+                    class="slider"
+                    id="slToneMapMidtones"
+                  />
+                  <span id="labelToneMapMidtones"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slToneMapShoulder">shoulder</label><br />
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="1.5"
+                    step="0.05"
+                    class="slider"
+                    id="slToneMapShoulder"
+                  />
+                  <span id="labelToneMapShoulder"></span>
+                </div>
+              </fieldset>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="./blackhole-simulator-bundle.js"></script>
+  </body>
+</html>

@@ -1,0 +1,197 @@
+fieldset {
+	border: 2px solid white;
+	margin: 0 15px 5px 15px;
+	background-color: #000000;
+}
+
+h3 {
+	margin-top: 5px;
+	margin-bottom: 5px;
+	font-family: sans-serif;
+	color: #eeeeee;
+}
+
+html, body {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	overflow: hidden;
+}
+
+body {
+	background-color: #000000;
+	color: #bbbbcc;
+	font-family: sans-serif;
+	font-size: 10pt;
+	font-weight: 100;
+}
+
+canvas {
+	width: 100%;
+	height: auto;
+	aspect-ratio: 1;
+	display: block;
+}
+
+div.slider {
+	margin-top: 5px;
+}
+
+input[type="range"] {
+	width: 240px;
+}
+
+label {
+	color: #eee;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+}
+
+.container {
+	min-height: 100vh;
+	display: flex;
+	padding: 20px;
+	box-sizing: border-box;
+}
+
+.main-content {
+	display: flex;
+	align-items: stretch;
+	gap: 15px;
+	width: 100%;
+	height: calc(100vh - 40px);
+}
+
+.canvas-section {
+	flex: 0 0 auto;
+	min-width: 360px;
+	height: 100%;
+	position: relative;
+}
+
+.canvas-wrapper {
+	height: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.canvas-info-message {
+	text-align: center;
+	color: #888;
+	font-size: 12pt;
+	font-family: sans-serif;
+	font-style: italic;
+	flex-shrink: 0;
+}
+
+.canvas-container {
+	position: relative;
+	box-sizing: border-box;
+	border: 2px solid white;
+	width: min(calc(100vh - 80px), calc(100vw - 420px));
+	height: min(calc(100vh - 80px), calc(100vw - 420px));
+	max-width: calc(100vh - 80px);
+	max-height: calc(100vh - 80px);
+	min-width: 300px;
+	min-height: 300px;
+	flex-shrink: 0;
+}
+
+.controls-section {
+	flex: 1;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	align-content: flex-start;
+	align-items: flex-start;
+	overflow-y: auto;
+	min-width: 360px;
+	height: 100%;
+}
+
+.controls-column {
+	flex: 1 1 360px;
+	min-width: 360px;
+	max-width: 360px;
+	display: flex;
+	flex-direction: column;
+}
+
+.controls-column form {
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.controls-column fieldset {
+	margin: 0;
+}
+
+.controls-column fieldset:last-child {
+	margin-bottom: 0;
+}
+
+/* Styles for changed values */
+div.slider.changed label {
+	color: #ff4444 !important;
+	font-weight: bold;
+}
+
+div.slider.changed span {
+	color: #ff4444 !important;
+	font-weight: bold;
+	font-size: 1.1em;
+}
+
+/* Add a visual indicator next to changed values */
+div.slider.changed span::after {
+	content: " ●";
+	color: #ff4444;
+	font-size: 0.8em;
+}
+
+/* Style the range input when parent div has changed class */
+div.slider.changed input[type="range"]::-webkit-slider-thumb {
+	background-color: #ff4444;
+	box-shadow: 0 0 5px #ff4444;
+}
+
+div.slider.changed input[type="range"]::-moz-range-thumb {
+	background-color: #ff4444;
+	box-shadow: 0 0 5px #ff4444;
+}
+
+/* Style the range track when changed */
+div.slider.changed input[type="range"]::-webkit-slider-runnable-track {
+	background: linear-gradient(to right, #ff4444 0%, #ff4444 50%, #666 50%, #666 100%);
+}
+
+/* Color picker changed state */
+div.slider.changed input[type="color"] {
+	border: 2px solid #ff4444;
+	box-shadow: 0 0 5px #ff4444;
+}
+
+/* Checkbox changed state */
+div.slider.changed input[type="checkbox"] {
+	accent-color: #ff4444;
+}
+
+/* Fallback: Ensure text is definitely red for changed sliders */
+.changed label,
+.changed span {
+	color: #ff4444 !important;
+}
+
+/* Even more specific: target any label/span inside a changed div */
+div.changed label,
+div.changed span {
+	color: #ff4444 !important;
+	font-weight: bold !important;
+}
+
