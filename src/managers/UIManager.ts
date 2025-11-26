@@ -1,5 +1,6 @@
 import { BlackholeSimulator } from "../BlackholeSimulator";
 import { DEFAULT_BLACKHOLE_VALUES } from "../entities/Blackhole";
+import { COLOR_PRESETS } from "../constants/presets";
 
 export class UIManager {
   private simulator: BlackholeSimulator;
@@ -126,7 +127,7 @@ export class UIManager {
       "labelBrightnessFactor",
       "brightnessFactor"
     );
-    
+
     // Adaptive step scaling sliders
     this.initializeSlider(
       "slStepMinScale",
@@ -174,15 +175,14 @@ export class UIManager {
       "labelDiscBrightness",
       "discBrightness"
     );
-    
+
     // Color controls
-    this.initializeColorToggle();
     this.initializeColorPresets();
     this.initializeColorPicker("centerColor");
     this.initializeColorPicker("discInnerColor");
     this.initializeColorPicker("discOuterColor");
     this.initializeColorPicker("backgroundTint");
-    
+
     // Transition controls
     this.initializeSlider(
       "slColorIntensity",
@@ -199,26 +199,6 @@ export class UIManager {
       "slColorInnerToCenterPoint",
       "labelColorInnerToCenterPoint",
       "colorInnerToCenterPoint"
-    );
-    this.initializeSlider(
-      "slWhitePoint",
-      "labelWhitePoint",
-      "whitePoint"
-    );
-    this.initializeSlider(
-      "slBlackPoint",
-      "labelBlackPoint",
-      "blackPoint"
-    );
-    this.initializeSlider(
-      "slTransparencyStart",
-      "labelTransparencyStart",
-      "transparencyStart"
-    );
-    this.initializeSlider(
-      "slTransparencyEnd",
-      "labelTransparencyEnd",
-      "transparencyEnd"
     );
     this.initializeSlider(
       "slDiscInnerFalloff",
@@ -297,19 +277,19 @@ export class UIManager {
 
   private checkIfChanged(value: any, defaultValue: any): boolean {
     // For numbers, check with small tolerance
-    if (typeof value === 'number' && typeof defaultValue === 'number') {
+    if (typeof value === "number" && typeof defaultValue === "number") {
       return Math.abs(value - defaultValue) > 0.001;
     }
-    // For arrays (colors), check each element
+    // For arrays (colors), check each element with higher tolerance for 8-bit color round-tripping
     if (Array.isArray(value) && Array.isArray(defaultValue)) {
-      return value.some((v, i) => Math.abs(v - defaultValue[i]) > 0.001);
+      return value.some((v, i) => Math.abs(v - defaultValue[i]) > 0.005);
     }
     return value !== defaultValue;
   }
 
   private updateChangedClass(element: HTMLElement, prop: string, value: any) {
     // Find the parent div.slider, not the input.slider
-    const container = element.closest('div.slider');
+    const container = element.closest("div.slider");
     if (!container) {
       return;
     }
@@ -319,13 +299,33 @@ export class UIManager {
       // Property might not have a default value (e.g., camera controls)
       return;
     }
-    
-    const hasChanged = this.checkIfChanged(value, defaultValue);
-    
+
+    // If we have a preset selected and this is a color property, compare against preset value instead
+    const presetSelect = document.getElementById(
+      "colorPreset"
+    ) as HTMLSelectElement;
+    const isColorProp = [
+      "centerColor",
+      "discInnerColor",
+      "discOuterColor",
+      "backgroundTint",
+    ].includes(prop);
+
+    let compareValue = defaultValue;
+
+    if (isColorProp && presetSelect && presetSelect.value !== "custom") {
+      const preset = (COLOR_PRESETS as any)[presetSelect.value];
+      if (preset && preset[prop]) {
+        compareValue = preset[prop];
+      }
+    }
+
+    const hasChanged = this.checkIfChanged(value, compareValue);
+
     if (hasChanged) {
-      container.classList.add('changed');
+      container.classList.add("changed");
     } else {
-      container.classList.remove('changed');
+      container.classList.remove("changed");
     }
   }
 
@@ -385,158 +385,172 @@ export class UIManager {
     };
   }
 
-  private initializeColorToggle() {
-    const checkbox = document.getElementById("cbEnableColorization") as HTMLInputElement;
-    if (!checkbox) return;
-    
-    // Set initial state
-    checkbox.checked = this.simulator.blackHole.enableColorization;
-    
-    // Check if it's changed from default value
-    const container = checkbox.closest('div.slider');
-    if (container) {
-      const hasChanged = this.checkIfChanged(
-        this.simulator.blackHole.enableColorization, 
-        DEFAULT_BLACKHOLE_VALUES.enableColorization
-      );
-      if (hasChanged) {
-        container.classList.add('changed');
-      }
-    }
-    
-    // Handle checkbox changes
-    checkbox.addEventListener("change", (e) => {
-      const target = e.target as HTMLInputElement;
-      this.simulator.blackHole.setEnableColorization(target.checked);
-      
-      // Update changed state
-      const container = checkbox.closest('div.slider');
-      if (container) {
-        const hasChanged = this.checkIfChanged(
-          target.checked, 
-          DEFAULT_BLACKHOLE_VALUES.enableColorization
-        );
-        if (hasChanged) {
-          container.classList.add('changed');
-        } else {
-          container.classList.remove('changed');
-        }
-      }
-      
-      // Enable/disable color controls based on checkbox state
-      const colorControls = [
-        "colorPreset",
-        "centerColor",
-        "discInnerColor", 
-        "discOuterColor",
-        "backgroundTint",
-        "resetCenterColor",
-        "resetDiscInnerColor",
-        "resetDiscOuterColor",
-        "resetBackgroundTint",
-        "slColorIntensity",
-        "slColorOuterToInnerPoint",
-        "slColorInnerToCenterPoint",
-        "slWhitePoint",
-        "slBlackPoint"
-      ];
-      
-      colorControls.forEach(id => {
-        const element = document.getElementById(id) as HTMLInputElement | HTMLButtonElement | HTMLSelectElement;
-        if (element) {
-          element.disabled = !target.checked;
-          element.style.opacity = target.checked ? "1" : "0.5";
-        }
-      });
-    });
-  }
-
   private initializeColorPresets() {
-    const presetSelect = document.getElementById("colorPreset") as HTMLSelectElement;
+    const presetSelect = document.getElementById(
+      "colorPreset"
+    ) as HTMLSelectElement;
     if (!presetSelect) return;
 
-    // Define color presets
-    const presets = {
-      classic: {
-        centerColor: [1.0, 1.0, 0.8],
-        discInnerColor: [1.0, 0.9, 0.5],
-        discOuterColor: [1.0, 0.5, 0.2],
-        backgroundTint: [0.0, 0.0, 0.0],
-      },
-      cosmic: {
-        centerColor: [0.8, 0.9, 1.0],
-        discInnerColor: [0.3, 0.6, 1.0],
-        discOuterColor: [0.1, 0.3, 0.8],
-        backgroundTint: [0.0, 0.0, 0.1],
-      },
-      toxic: {
-        centerColor: [0.9, 1.0, 0.9],
-        discInnerColor: [0.3, 1.0, 0.3],
-        discOuterColor: [0.1, 0.6, 0.1],
-        backgroundTint: [0.0, 0.05, 0.0],
-      },
-      inferno: {
-        centerColor: [1.0, 0.9, 0.8],
-        discInnerColor: [1.0, 0.3, 0.1],
-        discOuterColor: [0.8, 0.1, 0.0],
-        backgroundTint: [0.05, 0.0, 0.0],
-      },
-      purple: {
-        centerColor: [0.95, 0.85, 1.0],
-        discInnerColor: [0.8, 0.3, 0.9],
-        discOuterColor: [0.5, 0.1, 0.7],
-        backgroundTint: [0.05, 0.0, 0.1],
-      },
-      ice: {
-        centerColor: [0.95, 0.98, 1.0],
-        discInnerColor: [0.7, 0.9, 1.0],
-        discOuterColor: [0.3, 0.6, 0.9],
-        backgroundTint: [0.0, 0.02, 0.05],
-      },
-    };
+    // Populate select options dynamically
+    presetSelect.innerHTML = "";
+    Object.keys(COLOR_PRESETS).forEach((key) => {
+      const option = document.createElement("option");
+      option.value = key;
+      // Capitalize first letter for display
+      option.text = key.charAt(0).toUpperCase() + key.slice(1);
+      presetSelect.appendChild(option);
+    });
+
+    // Add Custom option
+    const customOption = document.createElement("option");
+    customOption.value = "custom";
+    customOption.text = "Custom";
+    presetSelect.appendChild(customOption);
 
     // Handle preset selection
     presetSelect.addEventListener("change", (e) => {
       const target = e.target as HTMLSelectElement;
       const presetName = target.value;
-      
+
       if (presetName === "custom") {
         // Don't change colors for custom preset
         return;
       }
-      
-      const preset = presets[presetName as keyof typeof presets];
+
+      const preset = (COLOR_PRESETS as any)[presetName];
       if (preset) {
         // Apply all colors from the preset
-        this.simulator.blackHole.setCenterColor(...(preset.centerColor as [number, number, number]));
-        this.simulator.blackHole.setDiscInnerColor(...(preset.discInnerColor as [number, number, number]));
-        this.simulator.blackHole.setDiscOuterColor(...(preset.discOuterColor as [number, number, number]));
-        this.simulator.blackHole.setBackgroundTint(...(preset.backgroundTint as [number, number, number]));
-        
+        this.simulator.blackHole.setCenterColor(
+          ...(preset.centerColor as [number, number, number])
+        );
+        this.simulator.blackHole.setDiscInnerColor(
+          ...(preset.discInnerColor as [number, number, number])
+        );
+        this.simulator.blackHole.setDiscOuterColor(
+          ...(preset.discOuterColor as [number, number, number])
+        );
+        this.simulator.blackHole.setBackgroundTint(
+          ...(preset.backgroundTint as [number, number, number])
+        );
+
         // Update color pickers to match
         const rgbToHex = (rgb: number[]) => {
           const toHex = (val: number) => {
             const hex = Math.round(val * 255).toString(16);
-            return hex.length === 1 ? '0' + hex : hex;
+            return hex.length === 1 ? "0" + hex : hex;
           };
-          return '#' + toHex(rgb[0]) + toHex(rgb[1]) + toHex(rgb[2]);
+          return "#" + toHex(rgb[0]) + toHex(rgb[1]) + toHex(rgb[2]);
         };
-        
-        const centerPicker = document.getElementById("centerColor") as HTMLInputElement;
-        const innerPicker = document.getElementById("discInnerColor") as HTMLInputElement;
-        const outerPicker = document.getElementById("discOuterColor") as HTMLInputElement;
-        const bgPicker = document.getElementById("backgroundTint") as HTMLInputElement;
-        
+
+        const centerPicker = document.getElementById(
+          "centerColor"
+        ) as HTMLInputElement;
+        const innerPicker = document.getElementById(
+          "discInnerColor"
+        ) as HTMLInputElement;
+        const outerPicker = document.getElementById(
+          "discOuterColor"
+        ) as HTMLInputElement;
+        const bgPicker = document.getElementById(
+          "backgroundTint"
+        ) as HTMLInputElement;
+
         if (centerPicker) centerPicker.value = rgbToHex(preset.centerColor);
         if (innerPicker) innerPicker.value = rgbToHex(preset.discInnerColor);
         if (outerPicker) outerPicker.value = rgbToHex(preset.discOuterColor);
         if (bgPicker) bgPicker.value = rgbToHex(preset.backgroundTint);
+
+        // Update changed state for all color pickers
+        if (centerPicker)
+          this.updateChangedClass(
+            centerPicker,
+            "centerColor",
+            preset.centerColor
+          );
+        if (innerPicker)
+          this.updateChangedClass(
+            innerPicker,
+            "discInnerColor",
+            preset.discInnerColor
+          );
+        if (outerPicker)
+          this.updateChangedClass(
+            outerPicker,
+            "discOuterColor",
+            preset.discOuterColor
+          );
+        if (bgPicker)
+          this.updateChangedClass(
+            bgPicker,
+            "backgroundTint",
+            preset.backgroundTint
+          );
       }
     });
-    
+
+    // Set initial value to test
+    presetSelect.value = "test";
+
+    // Apply the initial preset to ensure values match
+    const initialPreset = (COLOR_PRESETS as any)["test"];
+    if (initialPreset) {
+      this.simulator.blackHole.setCenterColor(
+        ...(initialPreset.centerColor as [number, number, number])
+      );
+      this.simulator.blackHole.setDiscInnerColor(
+        ...(initialPreset.discInnerColor as [number, number, number])
+      );
+      this.simulator.blackHole.setDiscOuterColor(
+        ...(initialPreset.discOuterColor as [number, number, number])
+      );
+      this.simulator.blackHole.setBackgroundTint(
+        ...(initialPreset.backgroundTint as [number, number, number])
+      );
+
+      // Update color pickers to match (and their change state)
+      // This needs to happen after setters so we read the new values
+      const colorPickers = [
+        "centerColor",
+        "discInnerColor",
+        "discOuterColor",
+        "backgroundTint",
+      ];
+      colorPickers.forEach((id) => {
+        // Re-trigger initialization/update for each picker
+        const picker = document.getElementById(id) as HTMLInputElement;
+        if (picker) {
+          const prop = id as keyof typeof this.simulator.blackHole;
+          const val = this.simulator.blackHole[prop];
+          // We can't easily call initializeColorPicker again,
+          // but we can update the value and changed class
+          // Actually, initializeColorPicker does this.
+          // But initializeColorPicker is called separately in updateHTML.
+
+          // Let's just trigger an input event on the picker?
+          // No, that sets the value FROM the picker to the model.
+
+          // We need to update Picker FROM Model.
+          const rgbToHex = (rgb: number[]) => {
+            const toHex = (val: number) => {
+              const hex = Math.round(val * 255).toString(16);
+              return hex.length === 1 ? "0" + hex : hex;
+            };
+            return "#" + toHex(rgb[0]) + toHex(rgb[1]) + toHex(rgb[2]);
+          };
+          picker.value = rgbToHex(val as number[]);
+          this.updateChangedClass(picker, id, val);
+        }
+      });
+    }
+
     // When any color picker changes, set preset to "custom"
-    const colorPickers = ["centerColor", "discInnerColor", "discOuterColor", "backgroundTint"];
-    colorPickers.forEach(id => {
+    const colorPickers = [
+      "centerColor",
+      "discInnerColor",
+      "discOuterColor",
+      "backgroundTint",
+    ];
+    colorPickers.forEach((id) => {
       const picker = document.getElementById(id);
       if (picker) {
         picker.addEventListener("input", () => {
@@ -548,62 +562,89 @@ export class UIManager {
 
   private initializeColorPicker(id: string) {
     const colorPicker = document.getElementById(id) as HTMLInputElement;
-    const resetButton = document.getElementById(`reset${id.charAt(0).toUpperCase() + id.slice(1)}`) as HTMLButtonElement;
-    
+    const resetButton = document.getElementById(
+      `reset${id.charAt(0).toUpperCase() + id.slice(1)}`
+    ) as HTMLButtonElement;
+
     if (!colorPicker) return;
-    
+
     // Get the property name from the ID
     const propertyName = id as keyof typeof this.simulator.blackHole;
-    
+
     // Convert RGB array to hex color
     const rgbToHex = (rgb: [number, number, number]) => {
       const toHex = (val: number) => {
         const hex = Math.round(val * 255).toString(16);
-        return hex.length === 1 ? '0' + hex : hex;
+        return hex.length === 1 ? "0" + hex : hex;
       };
-      return '#' + toHex(rgb[0]) + toHex(rgb[1]) + toHex(rgb[2]);
+      return "#" + toHex(rgb[0]) + toHex(rgb[1]) + toHex(rgb[2]);
     };
-    
+
     // Set initial value
-    const initialValue = this.simulator.blackHole[propertyName] as [number, number, number];
+    const initialValue = this.simulator.blackHole[propertyName] as [
+      number,
+      number,
+      number
+    ];
     colorPicker.value = rgbToHex(initialValue);
-    
+
     // Check initial state
     this.updateChangedClass(colorPicker, id, initialValue);
-    
+
     // Handle color changes
-    colorPicker.addEventListener('input', (e) => {
+    colorPicker.addEventListener("input", (e) => {
       const target = e.target as HTMLInputElement;
       const hex = target.value;
-      
+
       // Convert hex to RGB (0-1 range)
       const r = parseInt(hex.slice(1, 3), 16) / 255;
       const g = parseInt(hex.slice(3, 5), 16) / 255;
       const b = parseInt(hex.slice(5, 7), 16) / 255;
-      
+
       // Update the blackhole property
-      const setterName = `set${id.charAt(0).toUpperCase() + id.slice(1)}` as keyof typeof this.simulator.blackHole;
-      const setter = this.simulator.blackHole[setterName] as (r: number, g: number, b: number) => void;
+      const setterName = `set${
+        id.charAt(0).toUpperCase() + id.slice(1)
+      }` as keyof typeof this.simulator.blackHole;
+      const setter = this.simulator.blackHole[setterName] as (
+        r: number,
+        g: number,
+        b: number
+      ) => void;
       setter.call(this.simulator.blackHole, r, g, b);
-      
+
       // Update changed state
       this.updateChangedClass(colorPicker, id, [r, g, b]);
     });
-    
+
     // Handle reset button
     if (resetButton) {
-      resetButton.addEventListener('click', () => {
-        const defaultValue = (DEFAULT_BLACKHOLE_VALUES as any)[id] as [number, number, number];
+      resetButton.addEventListener("click", () => {
+        const defaultValue = (DEFAULT_BLACKHOLE_VALUES as any)[id] as [
+          number,
+          number,
+          number
+        ];
         if (defaultValue) {
           colorPicker.value = rgbToHex(defaultValue);
-          const setterName = `set${id.charAt(0).toUpperCase() + id.slice(1)}` as keyof typeof this.simulator.blackHole;
-          const setter = this.simulator.blackHole[setterName] as (r: number, g: number, b: number) => void;
-          setter.call(this.simulator.blackHole, defaultValue[0], defaultValue[1], defaultValue[2]);
-          
+          const setterName = `set${
+            id.charAt(0).toUpperCase() + id.slice(1)
+          }` as keyof typeof this.simulator.blackHole;
+          const setter = this.simulator.blackHole[setterName] as (
+            r: number,
+            g: number,
+            b: number
+          ) => void;
+          setter.call(
+            this.simulator.blackHole,
+            defaultValue[0],
+            defaultValue[1],
+            defaultValue[2]
+          );
+
           // Remove changed class since we're resetting to default value
-          const container = colorPicker.closest('div.slider');
+          const container = colorPicker.closest("div.slider");
           if (container) {
-            container.classList.remove('changed');
+            container.classList.remove("changed");
           }
         }
       });
@@ -651,21 +692,27 @@ export class UIManager {
         if (hasGpuTiming) {
           if (gpuElement) {
             // Calculate GPU utilization percentage based on actual frame rate
-            const targetFrameTime = 1000 / this.simulator.blackHole.maxFrameRate;
-            const gpuUtilization = this.simulator.blackHole.maxFrameRate >= 120 
-              ? 100 // Unlocked mode - show raw timing
-              : Math.min(100, (gpuTimes.frame / targetFrameTime) * 100);
-            
+            const targetFrameTime =
+              1000 / this.simulator.blackHole.maxFrameRate;
+            const gpuUtilization =
+              this.simulator.blackHole.maxFrameRate >= 120
+                ? 100 // Unlocked mode - show raw timing
+                : Math.min(100, (gpuTimes.frame / targetFrameTime) * 100);
+
             // Show both GPU time and utilization when frame rate is limited
-            const gpuText = this.simulator.blackHole.maxFrameRate >= 120
-              ? `GPU: ${gpuTimes.frame.toFixed(1)} ms`
-              : `GPU: ${gpuTimes.frame.toFixed(1)} ms (${gpuUtilization.toFixed(0)}%)`;
+            const gpuText =
+              this.simulator.blackHole.maxFrameRate >= 120
+                ? `GPU: ${gpuTimes.frame.toFixed(1)} ms`
+                : `GPU: ${gpuTimes.frame.toFixed(
+                    1
+                  )} ms (${gpuUtilization.toFixed(0)}%)`;
             gpuElement.textContent = gpuText;
-            
+
             // Add tooltip explaining GPU timing behavior with frame rate limiting
-            (gpuElement as HTMLElement).title = this.simulator.blackHole.maxFrameRate >= 120
-              ? "GPU frame time (unlocked frame rate)"
-              : "GPU timing varies with frame rate limiting due to power state changes. Set to 120 FPS for accurate timing.";
+            (gpuElement as HTMLElement).title =
+              this.simulator.blackHole.maxFrameRate >= 120
+                ? "GPU frame time (unlocked frame rate)"
+                : "GPU timing varies with frame rate limiting due to power state changes. Set to 120 FPS for accurate timing.";
           }
           if (mainElement)
             mainElement.textContent = `Main: ${gpuTimes.main.toFixed(1)} ms`;

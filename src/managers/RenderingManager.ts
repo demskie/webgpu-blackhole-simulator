@@ -21,7 +21,7 @@ export class RenderingManager {
 
   // Frame counter for performance profiling
   private frameCount = 0;
-  
+
   // Pass-through pipeline for grayscale output
   private passthroughPipeline: GPURenderPipeline | null = null;
 
@@ -193,11 +193,13 @@ export class RenderingManager {
     bloomExtractPass.setPipeline(
       resources.bloomResources.getBloomExtractPipeline()
     );
-    
+
     // Create a custom bind group for bloom extraction using grayscale
     const bloomExtractBindGroup = this.simulator.device.createBindGroup({
       label: "bloom extract bind group",
-      layout: resources.bloomResources.getBloomExtractPipeline().getBindGroupLayout(0),
+      layout: resources.bloomResources
+        .getBloomExtractPipeline()
+        .getBindGroupLayout(0),
       entries: [
         {
           binding: 0,
@@ -213,7 +215,7 @@ export class RenderingManager {
         },
       ],
     });
-    
+
     bloomExtractPass.setBindGroup(0, bloomExtractBindGroup);
     bloomExtractPass.draw(3, 1, 0, 0);
     bloomExtractPass.end();
@@ -282,18 +284,20 @@ export class RenderingManager {
           storeOp: "store",
         },
       ],
-      timestampWrites: this.isAdvancedOptionsEnabled() && !this.simulator.blackHole.enableColorization
+      timestampWrites: this.isAdvancedOptionsEnabled()
         ? this.simulator.performanceProfiler.getToneMappingTimestampWrites()
         : undefined,
     };
 
     const toneMapPass = commandEncoder.beginRenderPass(toneMapPassDesc);
     toneMapPass.setPipeline(resources.toneMapResources.getToneMapPipeline());
-    
+
     // Create bind group for tone mapping using grayscale
     const toneMapBindGroup = this.simulator.device.createBindGroup({
       label: "tone map bind group",
-      layout: resources.toneMapResources.getToneMapPipeline().getBindGroupLayout(0),
+      layout: resources.toneMapResources
+        .getToneMapPipeline()
+        .getBindGroupLayout(0),
       entries: [
         {
           binding: 0,
@@ -309,11 +313,14 @@ export class RenderingManager {
         },
         {
           binding: 3,
-          resource: resources.bloomResources.getBloomTextures(canvas.width, canvas.height).bloomTextureView1,
+          resource: resources.bloomResources.getBloomTextures(
+            canvas.width,
+            canvas.height
+          ).bloomTextureView1,
         },
       ],
     });
-    
+
     toneMapPass.setBindGroup(0, toneMapBindGroup);
     toneMapPass.draw(3, 1, 0, 0);
     toneMapPass.end();
@@ -384,7 +391,7 @@ export class RenderingManager {
 
   private getPassthroughPipeline(): GPURenderPipeline {
     if (this.passthroughPipeline) return this.passthroughPipeline;
-    
+
     const bindGroupLayout = this.simulator.device.createBindGroupLayout({
       label: "passthrough bind group layout",
       entries: [
@@ -396,24 +403,28 @@ export class RenderingManager {
         },
       ],
     });
-    
+
     this.passthroughPipeline = this.simulator.device.createRenderPipeline({
       label: "passthrough pipeline",
       layout: this.simulator.device.createPipelineLayout({
         bindGroupLayouts: [bindGroupLayout],
       }),
       vertex: {
-        module: this.simulator.device.createShaderModule({ code: fullscreenVertWGSL }),
+        module: this.simulator.device.createShaderModule({
+          code: fullscreenVertWGSL,
+        }),
         entryPoint: "main",
       },
       fragment: {
-        module: this.simulator.device.createShaderModule({ code: passthroughFragWGSL }),
+        module: this.simulator.device.createShaderModule({
+          code: passthroughFragWGSL,
+        }),
         entryPoint: "main",
         targets: [{ format: this.simulator.presentationFormat }],
       },
       primitive: { topology: "triangle-list" },
     });
-    
+
     return this.passthroughPipeline;
   }
 }

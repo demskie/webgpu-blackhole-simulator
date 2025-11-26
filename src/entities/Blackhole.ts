@@ -78,7 +78,7 @@ export class Blackhole {
   colorIntensity: number = 1.0; // Overall color intensity multiplier
   // Palette transition thresholds (0..1 along disc outer->inner proximity)
   colorOuterToInnerPoint: number = 0.4;
-  colorInnerToCenterPoint: number = 0.85;
+  colorInnerToCenterPoint: number = 0.3;
 
   private callbacks: BlackholeCallbacks;
 
@@ -471,5 +471,5 @@ export const DEFAULT_BLACKHOLE_VALUES = {
   transparencyEnd: 3.0, // Fully transparent at 3x radius
   colorIntensity: 1.0, // Start at 1.0 since we're not manipulating as much
   colorOuterToInnerPoint: 0.4,
-  colorInnerToCenterPoint: 0.85,
+  colorInnerToCenterPoint: 0.3,
 };

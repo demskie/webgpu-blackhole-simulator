@@ -2,7 +2,6 @@ import { BlackholeSimulator } from "../BlackholeSimulator";
 import { HDRResources } from "../resources/HDRResources";
 import { BloomResources } from "../resources/BloomResources";
 import { ToneMapResources } from "../resources/ToneMapResources";
-import { ColorizeResources } from "../resources/ColorizeResources";
 import { TextureCompute } from "../compute/TextureCompute";
 import { BlackholeCompute } from "../compute/BlackholeCompute";
 import { PerformanceProfiler } from "../profilers/PerformanceProfiler";
@@ -13,7 +12,6 @@ export class ResourceManager {
   hdrResources: HDRResources;
   bloomResources: BloomResources;
   toneMapResources: ToneMapResources;
-  colorizeResources: ColorizeResources;
   textureCompute: TextureCompute;
   blackholeCompute: BlackholeCompute;
 
@@ -40,7 +38,6 @@ export class ResourceManager {
     this.hdrResources = new HDRResources(simulator);
     this.bloomResources = new BloomResources(simulator);
     this.toneMapResources = new ToneMapResources(simulator);
-    this.colorizeResources = new ColorizeResources(simulator);
     this.textureCompute = new TextureCompute(simulator);
     this.blackholeCompute = new BlackholeCompute(simulator);
   }
@@ -624,7 +621,6 @@ export class ResourceManager {
     this.hdrResources.destroy();
     this.bloomResources.destroy();
     this.toneMapResources.destroy();
-    this.colorizeResources.destroy();
     this.textureCompute.destroy();
     this.blackholeCompute.destroy();
   }
