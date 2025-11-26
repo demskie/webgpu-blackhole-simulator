@@ -253,6 +253,19 @@
                 </div>
 
                 <div class="slider">
+                  <label for="slDiscThickness">disc thickness</label><br />
+                  <input
+                    type="range"
+                    min="0.01"
+                    max="1.0"
+                    step="0.01"
+                    class="slider"
+                    id="slDiscThickness"
+                  />
+                  <span id="labelDiscThickness"></span>
+                </div>
+
+                <div class="slider">
                   <label for="slDiscSpeed">disc speed</label><br />
                   <input
                     type="range"
@@ -318,19 +331,7 @@
                 </div>
 
                 <div class="slider">
-                  <label for="discOuterColor">disc outer color</label><br />
-                  <input type="color" id="discOuterColor" value="#ff8033" />
-                  <button id="resetDiscOuterColor" class="reset-btn">
-                    Reset
-                  </button>
-                </div>
-
-                <div class="slider">
-                  <label for="backgroundTint">background tint</label><br />
-                  <input type="color" id="backgroundTint" value="#000000" />
-                  <button id="resetBackgroundTint" class="reset-btn">
-                    Reset
-                  </button>
+                  <!-- disc outer color removed -->
                 </div>
 
                 <div class="slider">
@@ -347,23 +348,7 @@
                 </div>
 
                 <div class="slider">
-                  <label for="slColorOuterToInnerPoint"
-                    >outer → inner transition</label
-                  ><br />
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    class="slider"
-                    id="slColorOuterToInnerPoint"
-                  />
-                  <span id="labelColorOuterToInnerPoint"></span>
-                </div>
-
-                <div class="slider">
-                  <label for="slColorInnerToCenterPoint"
-                    >inner → center transition</label
+                  <label for="slColorInnerToCenterPoint">color fade start</label
                   ><br />
                   <input
                     type="range"
@@ -375,6 +360,21 @@
                   />
                   <span id="labelColorInnerToCenterPoint"></span>
                 </div>
+
+                <div class="slider">
+                  <label for="slColorFadeWidth">color fade width</label><br />
+                  <input
+                    type="range"
+                    min="0.01"
+                    max="1"
+                    step="0.01"
+                    class="slider"
+                    id="slColorFadeWidth"
+                  />
+                  <span id="labelColorFadeWidth"></span>
+                </div>
+
+                <!-- removed: outer → inner transition -->
 
                 <div class="slider">
                   <label for="slDiscInnerFalloff">disc inner falloff</label

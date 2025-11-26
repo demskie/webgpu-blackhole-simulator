@@ -8,77 +8,76 @@ export interface BlackholeCallbacks {
 export class Blackhole {
   // Core parameters
   time: number = 0;
-  maxFrameRate: number = 0;
-  animationSpeed: number = 0;
+  maxFrameRate: number = 30;
+  animationSpeed: number = 0.4;
 
-  // Camera parameters
-  cameraRotationX: number = 0;
-  cameraRotationY: number = 0;
-  cameraPanX: number = 0;
-  cameraPanY: number = 0;
+  // Camera parameters (rotation angles for RotateCamera function)
+  cameraRotationX: number = 0.5;
+  cameraRotationY: number = 0.5;
+  cameraPanX: number = 0.0; // Pan offset in normalized screen space
+  cameraPanY: number = 0.0;
 
-  // Black hole rotation (degrees)
-  blackHoleRotationX: number = 0;
-  blackHoleRotationY: number = 0;
-  blackHoleRotationZ: number = 0;
+  // Black hole rotation in degrees
+  blackHoleRotationX: number = -11.0;
+  blackHoleRotationY: number = 12.0;
+  blackHoleRotationZ: number = 20.0;
 
   // Raymarching parameters
-  iterations: number = 0;
-  enableTemporalAA: boolean = false;
-  temporalAAFrames: number = 0;
-  warpAmount: number = 0;
-  brightnessFactor: number = 0;
+  iterations: number = 23;
+  enableTemporalAA: boolean = true;
+  temporalAAFrames: number = 2; // Number of frames to blend for temporal AA (6 frames = 83.3% history weight)
+  warpAmount: number = 3.3;
+  brightnessFactor: number = 151.0; // Back to original since we're preserving intensity better
 
   // Accretion disc parameters
-  discRadius: number = 0;
-  discWidth: number = 0;
-  discThickness: number = 0;
-  discSpeed: number = 0;
-  discBrightness: number = 0;
-  discTemperature: number = 0;
-  discTemperatureRadiusFactor: number = 0;
-  discMinColorTemperature: number = 0;
-  discMaxColorTemperature: number = 0;
-  discInnerFalloff: number = 0;
-  discOuterFalloff: number = 0;
-  discTexturePower: number = 0;
-  discMinCoverage: number = 0;
-  discOuterTransparency: number = 0;
-  hazeIntensity: number = 0;
-  temporalMouseThreshold: number = 0;
+  discRadius: number = 3.1;
+  discWidth: number = 5.7;
+  discThickness: number = 0.02;
+  discSpeed: number = 0.06;
+  discBrightness: number = 7; // Adjusted for post-tone-mapping colorization
+  discTemperature: number = 6000; // Base temperature in Kelvin
+  discTemperatureRadiusFactor: number = 10000.0; // Temperature increase per unit radius
+  discMinColorTemperature: number = 1000.0; // Min temperature for color mapping
+  discMaxColorTemperature: number = 40000.0; // Max temperature for color mapping
+  discInnerFalloff: number = 4.5;
+  discOuterFalloff: number = 1.4;
+  discTexturePower: number = 0.1; // Power applied to procedural texture (higher = darker edges)
+  discMinCoverage: number = 0.0; // Min coverage to prevent outer edges going black
+  discOuterTransparency: number = 0.0; // 0 = fully transparent outer edge, 1 = opaque
+  hazeIntensity: number = 25; // BUG: this isn't in the UI
+  temporalMouseThreshold: number = 1.0;
 
   // Adaptive step scaling parameters
-  stepMinScale: number = 0;
-  stepMaxScale: number = 0;
-  stepNearFactor: number = 0;
-  stepFarFactor: number = 0;
+  stepMinScale: number = 0.35; // Min step scale (near black hole)
+  stepMaxScale: number = 1.85; // Max step scale (far from black hole)
+  stepNearFactor: number = 0.6; // Factor for near radius calculation
+  stepFarFactor: number = 1.2; // Factor for far radius calculation
 
   // HDR and Bloom parameters
-  exposure: number = 0;
-  saturation: number = 0;
-  bloomIntensity: number = 0;
-  bloomThreshold: number = 0;
-  shadowLift: number = 0;
-  minLiftThreshold: number = 0;
-  toneMapToe: number = 0;
-  toneMapHighlights: number = 0;
-  toneMapMidtones: number = 0;
-  toneMapShoulder: number = 0;
+  exposure: number = 0.3; // Balanced for natural intensity preservation
+  saturation: number = 1.0;
+  bloomIntensity: number = 0.15;
+  bloomThreshold: number = 0.0;
+  shadowLift: number = 0.0;
+  minLiftThreshold: number = 0.0;
+  toneMapToe: number = 0.0;
+  toneMapHighlights: number = 1.0;
+  toneMapMidtones: number = 1.0;
+  toneMapShoulder: number = 1.0;
 
-  // Color control parameters
-  enableColorization: boolean = true; // Toggle colorization pass
-  centerColor: [number, number, number] = [1, 1, 1];
-  discInnerColor: [number, number, number] = [1, 0.9, 0.7];
-  discOuterColor: [number, number, number] = [1, 0.6, 0.3];
-  backgroundTint: [number, number, number] = [0, 0, 0];
-  whitePoint: number = 0.8;
-  blackPoint: number = 0.02;
-  transparencyStart: number = 1.5;
-  transparencyEnd: number = 2.0;
-  colorIntensity: number = 1.0; // Overall color intensity multiplier
+  // Color control parameters (default to classic yellow-white-orange scheme)
+  enableColorization: boolean = false; // Enable colorization by default
+  centerColor: [number, number, number] = [1.0, 1.0, 1.0]; // Bright yellow-white
+  discInnerColor: [number, number, number] = [185 / 255, 124 / 255, 55 / 255]; // Yellow
+  whitePoint: number = 0.8; // Adjusted for better range
+  blackPoint: number = 0.02; // Lower threshold for better black preservation
+  transparencyStart: number = 2.0; // Start fading at 2x radius
+  transparencyEnd: number = 3.0; // Fully transparent at 3x radius
+  colorIntensity: number = 1.0; // Start at 1.0 since we're not manipulating as much
   // Palette transition thresholds (0..1 along disc outer->inner proximity)
-  colorOuterToInnerPoint: number = 0.4;
-  colorInnerToCenterPoint: number = 0.3;
+  colorOuterToInnerPoint: number = 0.4; // unused now; kept for compatibility
+  colorInnerToCenterPoint: number = 0.87; // fade start (inner->center)
+  colorFadeWidth: number = 1.0; // width of fade (how quickly colors transition)
 
   private callbacks: BlackholeCallbacks;
 
@@ -86,7 +85,7 @@ export class Blackhole {
     props: Partial<Blackhole> = {},
     callbacks: BlackholeCallbacks = {}
   ) {
-    Object.assign(this, DEFAULT_BLACKHOLE_VALUES, props);
+    Object.assign(this, props);
     this.callbacks = callbacks;
   }
 
@@ -156,6 +155,11 @@ export class Blackhole {
 
   setDiscWidth(val: number) {
     this.discWidth = val;
+    this.callbacks.onParametersChanged?.();
+  }
+
+  setDiscThickness(val: number) {
+    this.discThickness = val;
     this.callbacks.onParametersChanged?.();
   }
 
@@ -318,16 +322,6 @@ export class Blackhole {
     this.callbacks.onParametersChanged?.();
   }
 
-  setDiscOuterColor(r: number, g: number, b: number) {
-    this.discOuterColor = [r, g, b];
-    this.callbacks.onParametersChanged?.();
-  }
-
-  setBackgroundTint(r: number, g: number, b: number) {
-    this.backgroundTint = [r, g, b];
-    this.callbacks.onParametersChanged?.();
-  }
-
   setWhitePoint(val: number) {
     this.whitePoint = val;
     this.callbacks.onParametersChanged?.();
@@ -360,6 +354,11 @@ export class Blackhole {
 
   setColorInnerToCenterPoint(val: number) {
     this.colorInnerToCenterPoint = Math.max(0.0, Math.min(1.0, val));
+    this.callbacks.onParametersChanged?.();
+  }
+
+  setColorFadeWidth(val: number) {
+    this.colorFadeWidth = Math.max(0.001, Math.min(1.0, val));
     this.callbacks.onParametersChanged?.();
   }
 
@@ -398,78 +397,3 @@ export class Blackhole {
     ]);
   }
 }
-
-export const DEFAULT_BLACKHOLE_VALUES = {
-  // Core parameters
-  time: 0,
-  maxFrameRate: 30,
-  animationSpeed: 0.3,
-
-  // Camera parameters (rotation angles for RotateCamera function)
-  cameraRotationX: 0.5,
-  cameraRotationY: 0.5,
-  cameraPanX: 0.0, // Pan offset in normalized screen space
-  cameraPanY: 0.0,
-
-  // Black hole rotation in degrees
-  blackHoleRotationX: -11.0,
-  blackHoleRotationY: 12.0,
-  blackHoleRotationZ: 20.0,
-
-  // Raymarching parameters
-  iterations: 23,
-  enableTemporalAA: true,
-  temporalAAFrames: 2, // Number of frames to blend for temporal AA (6 frames = 83.3% history weight)
-  warpAmount: 3.3,
-  brightnessFactor: 151.0, // Back to original since we're preserving intensity better
-
-  // Accretion disc parameters
-  discRadius: 3.1,
-  discWidth: 5.7,
-  discThickness: 0.1,
-  discSpeed: 0.06,
-  discBrightness: 6.7, // Adjusted for post-tone-mapping colorization
-  discTemperature: 6000, // Base temperature in Kelvin
-  discTemperatureRadiusFactor: 10000.0, // Temperature increase per unit radius
-  discMinColorTemperature: 1000.0, // Min temperature for color mapping
-  discMaxColorTemperature: 40000.0, // Max temperature for color mapping
-  discInnerFalloff: 4.0,
-  discOuterFalloff: 0.9,
-  discTexturePower: 2.0, // Power applied to procedural texture (higher = darker edges)
-  discMinCoverage: 0.15, // Min coverage to prevent outer edges going black
-  discOuterTransparency: 0.0, // 0 = fully transparent outer edge, 1 = opaque
-  hazeIntensity: 2.9,
-  temporalMouseThreshold: 1.0,
-
-  // Adaptive step scaling parameters
-  stepMinScale: 0.35, // Min step scale (near black hole)
-  stepMaxScale: 1.85, // Max step scale (far from black hole)
-  stepNearFactor: 0.6, // Factor for near radius calculation
-  stepFarFactor: 1.2, // Factor for far radius calculation
-
-  // HDR and Bloom parameters
-  exposure: 0.3, // Balanced for natural intensity preservation
-  saturation: 1.0,
-  bloomIntensity: 0.15,
-  bloomThreshold: 0.0,
-  shadowLift: 0.0,
-  minLiftThreshold: 0.0,
-  toneMapToe: 0.0,
-  toneMapHighlights: 1.0,
-  toneMapMidtones: 1.0,
-  toneMapShoulder: 1.0,
-
-  // Color control parameters (default to classic yellow-white-orange scheme)
-  enableColorization: false, // Enable colorization by default
-  centerColor: [1.0, 1.0, 0.8] as [number, number, number], // Bright yellow-white
-  discInnerColor: [1.0, 0.9, 0.5] as [number, number, number], // Yellow
-  discOuterColor: [1.0, 0.5, 0.2] as [number, number, number], // Orange
-  backgroundTint: [0.0, 0.0, 0.0] as [number, number, number], // Black space
-  whitePoint: 0.8, // Adjusted for better range
-  blackPoint: 0.02, // Lower threshold for better black preservation
-  transparencyStart: 2.0, // Start fading at 2x radius
-  transparencyEnd: 3.0, // Fully transparent at 3x radius
-  colorIntensity: 1.0, // Start at 1.0 since we're not manipulating as much
-  colorOuterToInnerPoint: 0.4,
-  colorInnerToCenterPoint: 0.3,
-};

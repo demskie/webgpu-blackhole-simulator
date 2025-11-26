@@ -102,33 +102,35 @@ fn smootherstep(edge0: f32, edge1: f32, x: f32) -> f32 {
 }
 
 fn paletteColor(t: f32) -> vec3<f32> {
-  // t: 0 = outer disc, 1 = inner disc (toward center)
-  // Interpret uniforms as relative widths (percentages)
-  var outerWidth = clamp(uniforms.colorOuterToInnerPoint, 0.0, 1.0);
-  var centerWidth = clamp(uniforms.colorInnerToCenterPoint, 0.0, 1.0);
-  let sumWidths = outerWidth + centerWidth;
-  if (sumWidths > 0.98) {
-    let s = 0.98 / sumWidths;
-    outerWidth *= s;
-    centerWidth *= s;
-  }
-  let o2iEnd = outerWidth;            // end of outer region
-  let i2cStart = 1.0 - centerWidth;   // start of center region
+  // Simple 3-stop radial blend:
+  // t: 0 = outer rim, 1 = inner/center
+  let o2i = clamp(uniforms.colorOuterToInnerPoint, 0.0, 1.0);        // outer -> inner threshold
+  let i2cStart = clamp(1.0 - uniforms.colorInnerToCenterPoint, 0.0, 1.0); // inner -> center start
 
-  // Smooth transitions across the computed regions
-  let tOuterInner = smootherstep(0.0, max(o2iEnd, 0.0001), t);
-  let tInnerCenter = smootherstep(i2cStart, 1.0, t);
-  var c = mix(
-    vec3<f32>(uniforms.discOuterColorR, uniforms.discOuterColorG, uniforms.discOuterColorB),
-    vec3<f32>(uniforms.discInnerColorR, uniforms.discInnerColorG, uniforms.discInnerColorB),
-    tOuterInner
-  );
-  c = mix(
-    c,
-    vec3<f32>(uniforms.centerColorR, uniforms.centerColorG, uniforms.centerColorB),
-    tInnerCenter
-  );
+  let outer = vec3<f32>(uniforms.discOuterColorR, uniforms.discOuterColorG, uniforms.discOuterColorB);
+  let inner = vec3<f32>(uniforms.discInnerColorR, uniforms.discInnerColorG, uniforms.discInnerColorB);
+  let center = vec3<f32>(uniforms.centerColorR, uniforms.centerColorG, uniforms.centerColorB);
+
+  // Smooth transitions using built-in smoothstep
+  let a = smoothstep(0.0, max(o2i, 1e-4), t);     // outer -> inner
+  let b = smoothstep(i2cStart, 1.0, t);           // inner -> center
+
+  var c = mix(outer, inner, a);
+  c = mix(c, center, b);
   return c;
+}
+
+// Simplified two-color palette: outer -> inner
+fn paletteTwoColor(t: f32) -> vec3<f32> {
+  let tt = saturate_f32(t);
+  // Use a single threshold to control where color fades from inner -> center
+  let threshold = clamp(uniforms.colorInnerToCenterPoint, 0.0, 1.0);
+  // Repurpose colorOuterToInnerPoint as fade width (0..1)
+  let width = max(0.001, uniforms.colorOuterToInnerPoint);
+  let s = smoothstep(threshold, min(1.0, threshold + width), tt);
+  let inner = vec3<f32>(uniforms.discInnerColorR, uniforms.discInnerColorG, uniforms.discInnerColorB);
+  let center = vec3<f32>(uniforms.centerColorR, uniforms.centerColorG, uniforms.centerColorB);
+  return mix(inner, center, s);
 }
 
 fn noise(x: vec3<f32>) -> f32 {
@@ -200,10 +202,10 @@ fn calculateIntensity(radialGradient: f32, distFromCenter: f32, bloomFactor: f32
   // radialGradient is 1.0 at inner edge, 0.0 at outer edge
   // Use it to create smooth intensity transitions
   let baseIntensity = radialGradient * radialGradient; // Quadratic falloff
-  
+
   // Add bloom contribution
   let bloomContribution = saturate_f32(bloomFactor * bloomFactor * 0.5);
-  
+
   // Combine intensities with artistic control
   return saturate_f32(baseIntensity + bloomContribution);
 }
@@ -238,7 +240,8 @@ fn gasDisc(color: ptr<function, vec3<f32>>, alpha: ptr<function, f32>, pos: vec3
   let radialGradient = 1.0 - normalizedRadial;
   var coverage = pcurve(radialGradient, 4.0, 0.9);
 
-  discThickness *= radialGradient;
+  // Preserve a minimum thickness near the outer rim so outer color can accumulate
+  discThickness = max(0.35 * uniforms.discThickness, discThickness * radialGradient);
   coverage *= saturate_f32(1.0 - abs(distFromDisc) / discThickness);
 
   let rg_inv = 1.0 - radialGradient;
@@ -294,11 +297,12 @@ fn gasDisc(color: ptr<function, vec3<f32>>, alpha: ptr<function, f32>, pos: vec3
   // Apply outer edge transparency to eliminate black shadow
   // radialGradient is 1.0 at inner edge, 0.0 at outer edge
   // So we want to fade out when radialGradient approaches 0
-  let outerFade = mix(uniforms.discOuterTransparency, 1.0, radialGradient);
+  // Soften the fade so the rim doesn't vanish too quickly
+  let outerFade = mix(uniforms.discOuterTransparency, 1.0, pow(radialGradient, 0.5));
   coverage *= outerFade;
 
   // Accumulate color using palette based on radial position (inner->outer)
-  let tint = paletteColor(radialGradient);
+  let tint = paletteTwoColor(radialGradient);
   let energy = dustIntensity * coverage;
   *color = *color + (1.0 - *alpha) * tint * energy;
   *alpha = (1.0 - *alpha) * coverage + *alpha;

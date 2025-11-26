@@ -1,5 +1,5 @@
 import { BlackholeSimulator } from "../BlackholeSimulator";
-import { DEFAULT_BLACKHOLE_VALUES } from "../entities/Blackhole";
+import { Blackhole } from "../entities/Blackhole";
 import { COLOR_PRESETS } from "../constants/presets";
 
 export class UIManager {
@@ -10,6 +10,8 @@ export class UIManager {
   private dragStartY = 0;
   private dragStartPanX = 0;
   private dragStartPanY = 0;
+  // Create a default blackhole instance to get default values for comparison
+  private defaultBlackhole = new Blackhole();
 
   constructor(simulator: BlackholeSimulator) {
     this.simulator = simulator;
@@ -169,6 +171,11 @@ export class UIManager {
 
     this.initializeSlider("slDiscRadius", "labelDiscRadius", "discRadius");
     this.initializeSlider("slDiscWidth", "labelDiscWidth", "discWidth");
+    this.initializeSlider(
+      "slDiscThickness",
+      "labelDiscThickness",
+      "discThickness"
+    );
     this.initializeSlider("slDiscSpeed", "labelDiscSpeed", "discSpeed");
     this.initializeSlider(
       "slDiscBrightness",
@@ -180,8 +187,6 @@ export class UIManager {
     this.initializeColorPresets();
     this.initializeColorPicker("centerColor");
     this.initializeColorPicker("discInnerColor");
-    this.initializeColorPicker("discOuterColor");
-    this.initializeColorPicker("backgroundTint");
 
     // Transition controls
     this.initializeSlider(
@@ -189,16 +194,17 @@ export class UIManager {
       "labelColorIntensity",
       "colorIntensity"
     );
-    // Palette threshold controls
-    this.initializeSlider(
-      "slColorOuterToInnerPoint",
-      "labelColorOuterToInnerPoint",
-      "colorOuterToInnerPoint"
-    );
+    // Palette threshold control (single)
     this.initializeSlider(
       "slColorInnerToCenterPoint",
       "labelColorInnerToCenterPoint",
       "colorInnerToCenterPoint"
+    );
+    // Fade width control
+    this.initializeSlider(
+      "slColorFadeWidth",
+      "labelColorFadeWidth",
+      "colorFadeWidth"
     );
     this.initializeSlider(
       "slDiscInnerFalloff",
@@ -294,7 +300,7 @@ export class UIManager {
       return;
     }
 
-    const defaultValue = (DEFAULT_BLACKHOLE_VALUES as any)[prop];
+    const defaultValue = (this.defaultBlackhole as any)[prop];
     if (defaultValue === undefined) {
       // Property might not have a default value (e.g., camera controls)
       return;
@@ -307,8 +313,6 @@ export class UIManager {
     const isColorProp = [
       "centerColor",
       "discInnerColor",
-      "discOuterColor",
-      "backgroundTint",
     ].includes(prop);
 
     let compareValue = defaultValue;
@@ -426,12 +430,6 @@ export class UIManager {
         this.simulator.blackHole.setDiscInnerColor(
           ...(preset.discInnerColor as [number, number, number])
         );
-        this.simulator.blackHole.setDiscOuterColor(
-          ...(preset.discOuterColor as [number, number, number])
-        );
-        this.simulator.blackHole.setBackgroundTint(
-          ...(preset.backgroundTint as [number, number, number])
-        );
 
         // Update color pickers to match
         const rgbToHex = (rgb: number[]) => {
@@ -448,17 +446,9 @@ export class UIManager {
         const innerPicker = document.getElementById(
           "discInnerColor"
         ) as HTMLInputElement;
-        const outerPicker = document.getElementById(
-          "discOuterColor"
-        ) as HTMLInputElement;
-        const bgPicker = document.getElementById(
-          "backgroundTint"
-        ) as HTMLInputElement;
 
         if (centerPicker) centerPicker.value = rgbToHex(preset.centerColor);
         if (innerPicker) innerPicker.value = rgbToHex(preset.discInnerColor);
-        if (outerPicker) outerPicker.value = rgbToHex(preset.discOuterColor);
-        if (bgPicker) bgPicker.value = rgbToHex(preset.backgroundTint);
 
         // Update changed state for all color pickers
         if (centerPicker)
@@ -472,18 +462,6 @@ export class UIManager {
             innerPicker,
             "discInnerColor",
             preset.discInnerColor
-          );
-        if (outerPicker)
-          this.updateChangedClass(
-            outerPicker,
-            "discOuterColor",
-            preset.discOuterColor
-          );
-        if (bgPicker)
-          this.updateChangedClass(
-            bgPicker,
-            "backgroundTint",
-            preset.backgroundTint
           );
       }
     });
@@ -500,21 +478,10 @@ export class UIManager {
       this.simulator.blackHole.setDiscInnerColor(
         ...(initialPreset.discInnerColor as [number, number, number])
       );
-      this.simulator.blackHole.setDiscOuterColor(
-        ...(initialPreset.discOuterColor as [number, number, number])
-      );
-      this.simulator.blackHole.setBackgroundTint(
-        ...(initialPreset.backgroundTint as [number, number, number])
-      );
 
       // Update color pickers to match (and their change state)
       // This needs to happen after setters so we read the new values
-      const colorPickers = [
-        "centerColor",
-        "discInnerColor",
-        "discOuterColor",
-        "backgroundTint",
-      ];
+      const colorPickers = ["centerColor", "discInnerColor"];
       colorPickers.forEach((id) => {
         // Re-trigger initialization/update for each picker
         const picker = document.getElementById(id) as HTMLInputElement;
@@ -548,7 +515,6 @@ export class UIManager {
       "centerColor",
       "discInnerColor",
       "discOuterColor",
-      "backgroundTint",
     ];
     colorPickers.forEach((id) => {
       const picker = document.getElementById(id);
@@ -619,7 +585,7 @@ export class UIManager {
     // Handle reset button
     if (resetButton) {
       resetButton.addEventListener("click", () => {
-        const defaultValue = (DEFAULT_BLACKHOLE_VALUES as any)[id] as [
+        const defaultValue = (this.defaultBlackhole as any)[id] as [
           number,
           number,
           number

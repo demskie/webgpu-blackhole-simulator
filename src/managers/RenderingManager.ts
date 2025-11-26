@@ -105,11 +105,12 @@ export class RenderingManager {
     this.uniformScratch[31] = bh.discInnerColor[0];
     this.uniformScratch[32] = bh.discInnerColor[1];
     this.uniformScratch[33] = bh.discInnerColor[2];
-    this.uniformScratch[34] = bh.discOuterColor[0];
-    this.uniformScratch[35] = bh.discOuterColor[1];
-    this.uniformScratch[36] = bh.discOuterColor[2];
+    // this.uniformScratch[34] = bh.discOuterColor[0];
+    // this.uniformScratch[35] = bh.discOuterColor[1];
+    // this.uniformScratch[36] = bh.discOuterColor[2];
     this.uniformScratch[37] = bh.colorIntensity;
-    this.uniformScratch[38] = bh.colorOuterToInnerPoint;
+    // Repurpose index 38 as color fade width; 39 stays as fade start
+    this.uniformScratch[38] = bh.colorFadeWidth;
     this.uniformScratch[39] = bh.colorInnerToCenterPoint;
     device.queue.writeBuffer(
       resources.getUniformBuffer(),
