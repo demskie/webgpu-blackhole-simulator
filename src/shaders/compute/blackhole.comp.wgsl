@@ -216,7 +216,17 @@ fn haze(color: ptr<function, vec3<f32>>, pos: vec3<f32>, alpha: f32, invIteratio
   var bloomDisc = 1.0 / (torusDist * torusDist + 0.001);
   bloomDisc *= select(1.0, 0.0, length(pos) < 0.5);
   let hazeAmount = bloomDisc * (uniforms.hazeIntensity * invIterations) * (1.0 - alpha * 1.0);
-  *color = *color + vec3<f32>(hazeAmount) * (1.0 - alpha);
+
+  // Calculate radial gradient for color based on distance from disc center
+  let discInner = uniforms.discRadius - uniforms.discWidth * 0.5;
+  let discOuter = uniforms.discRadius + uniforms.discWidth * 0.5;
+  let distFromCenter = length(pos.xz); // Distance in the disc plane
+  let normalizedRadial = saturate_f32((distFromCenter - discInner) / (discOuter - discInner));
+  let radialGradient = 1.0 - normalizedRadial;
+
+  // Tint haze with the same palette as the disc particles
+  let tint = paletteTwoColor(radialGradient);
+  *color = *color + tint * hazeAmount * (1.0 - alpha);
 }
 
 fn gasDisc(color: ptr<function, vec3<f32>>, alpha: ptr<function, f32>, pos: vec3<f32>, invIterations: f32) {
@@ -318,12 +328,25 @@ fn rotateBlackhole(pos: vec3<f32>) -> vec3<f32> {
   return rotate(pos, -uniforms.blackHoleRotationX, -uniforms.blackHoleRotationY, -uniforms.blackHoleRotationZ);
 }
 
-fn warpSpace(eyevec: ptr<function, vec3<f32>>, raypos: vec3<f32>, invIterations: f32) {
+// Apply warp with substeps to ensure consistent ray trajectory regardless of main iteration count.
+// This subdivides large steps into smaller warp calculations for accurate integration.
+fn warpSpace(eyevec: ptr<function, vec3<f32>>, raypos: ptr<function, vec3<f32>>, stepDistance: f32) {
   let origin = vec3<f32>(0.0, 0.0, 0.0);
-  let singularityDist = distance(raypos, origin);
-  let warpFactor = 1.0 / (singularityDist * singularityDist + 0.000001);
-  let singularityVector = normalize(origin - raypos);
-  *eyevec = normalize(*eyevec + singularityVector * warpFactor * uniforms.warpAmount * invIterations);
+
+  // Fixed warp integration step - approximately what 50 iterations would use
+  // This ensures consistent ray bending regardless of main iteration count
+  let targetWarpStep = 0.3;
+  let numSubsteps = max(1, i32(ceil(stepDistance / targetWarpStep)));
+  let substepDist = stepDistance / f32(numSubsteps);
+  let warpCoeff = substepDist / 15.0; // Normalize to total ray distance
+
+  for (var s = 0; s < numSubsteps; s++) {
+    let singularityDist = distance(*raypos, origin);
+    let warpFactor = 1.0 / (singularityDist * singularityDist + 0.000001);
+    let singularityVector = normalize(origin - *raypos);
+    *eyevec = normalize(*eyevec + singularityVector * warpFactor * uniforms.warpAmount * warpCoeff);
+    *raypos = *raypos + *eyevec * substepDist;
+  }
 }
 
 @compute @workgroup_size(16, 16, 1)
@@ -376,8 +399,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let localStep = baseStep * stepScale;
     let stepWeight = invIterations * stepScale; // equals localStep / far
 
-    warpSpace(&eyevec, raypos, stepWeight);
-    raypos += eyevec * localStep;
+    warpSpace(&eyevec, &raypos, localStep);
     let rotatedPos = rotBH * raypos;
     gasDisc(&accumColor, &alpha, rotatedPos, stepWeight);
     haze(&accumColor, rotatedPos, alpha, stepWeight);

@@ -232,6 +232,11 @@ export class UIManager {
       "discOuterTransparency"
     );
     this.initializeSlider(
+      "slHazeIntensity",
+      "labelHazeIntensity",
+      "hazeIntensity"
+    );
+    this.initializeSlider(
       "slMaxFrameRate",
       "labelMaxFrameRate",
       "maxFrameRate"
@@ -310,10 +315,7 @@ export class UIManager {
     const presetSelect = document.getElementById(
       "colorPreset"
     ) as HTMLSelectElement;
-    const isColorProp = [
-      "centerColor",
-      "discInnerColor",
-    ].includes(prop);
+    const isColorProp = ["centerColor", "discInnerColor"].includes(prop);
 
     let compareValue = defaultValue;
 
@@ -467,10 +469,10 @@ export class UIManager {
     });
 
     // Set initial value to test
-    presetSelect.value = "test";
+    presetSelect.value = "classic";
 
     // Apply the initial preset to ensure values match
-    const initialPreset = (COLOR_PRESETS as any)["test"];
+    const initialPreset = (COLOR_PRESETS as any)["classic"];
     if (initialPreset) {
       this.simulator.blackHole.setCenterColor(
         ...(initialPreset.centerColor as [number, number, number])
@@ -511,11 +513,7 @@ export class UIManager {
     }
 
     // When any color picker changes, set preset to "custom"
-    const colorPickers = [
-      "centerColor",
-      "discInnerColor",
-      "discOuterColor",
-    ];
+    const colorPickers = ["centerColor", "discInnerColor", "discOuterColor"];
     colorPickers.forEach((id) => {
       const picker = document.getElementById(id);
       if (picker) {

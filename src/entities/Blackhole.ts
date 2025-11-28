@@ -23,7 +23,7 @@ export class Blackhole {
   blackHoleRotationZ: number = 20.0;
 
   // Raymarching parameters
-  iterations: number = 23;
+  iterations: number = 21;
   enableTemporalAA: boolean = true;
   temporalAAFrames: number = 2; // Number of frames to blend for temporal AA (6 frames = 83.3% history weight)
   warpAmount: number = 3.3;
@@ -44,7 +44,7 @@ export class Blackhole {
   discTexturePower: number = 0.1; // Power applied to procedural texture (higher = darker edges)
   discMinCoverage: number = 0.0; // Min coverage to prevent outer edges going black
   discOuterTransparency: number = 0.0; // 0 = fully transparent outer edge, 1 = opaque
-  hazeIntensity: number = 25; // BUG: this isn't in the UI
+  hazeIntensity: number = 25;
   temporalMouseThreshold: number = 1.0;
 
   // Adaptive step scaling parameters
@@ -56,7 +56,7 @@ export class Blackhole {
   // HDR and Bloom parameters
   exposure: number = 0.3; // Balanced for natural intensity preservation
   saturation: number = 1.0;
-  bloomIntensity: number = 0.15;
+  bloomIntensity: number = 0.0;
   bloomThreshold: number = 0.0;
   shadowLift: number = 0.0;
   minLiftThreshold: number = 0.0;
@@ -65,10 +65,10 @@ export class Blackhole {
   toneMapMidtones: number = 1.0;
   toneMapShoulder: number = 1.0;
 
-  // Color control parameters (default to classic yellow-white-orange scheme)
+  // Color control parameters
   enableColorization: boolean = false; // Enable colorization by default
-  centerColor: [number, number, number] = [1.0, 1.0, 1.0]; // Bright yellow-white
-  discInnerColor: [number, number, number] = [185 / 255, 124 / 255, 55 / 255]; // Yellow
+  centerColor: [number, number, number] = [1.0, 1.0, 1.0];
+  discInnerColor: [number, number, number] = [1.0, 1.0, 1.0];
   whitePoint: number = 0.8; // Adjusted for better range
   blackPoint: number = 0.02; // Lower threshold for better black preservation
   transparencyStart: number = 2.0; // Start fading at 2x radius
@@ -216,6 +216,11 @@ export class Blackhole {
 
   setDiscOuterTransparency(val: number) {
     this.discOuterTransparency = val;
+    this.callbacks.onParametersChanged?.();
+  }
+
+  setHazeIntensity(val: number) {
+    this.hazeIntensity = val;
     this.callbacks.onParametersChanged?.();
   }
 
