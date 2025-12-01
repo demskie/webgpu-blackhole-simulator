@@ -23,6 +23,7 @@ export class BlackholeSimulator {
   readonly memoryProfiler: MemoryProfiler;
 
   private startTime: number = 0;
+  private lastUpdateTime: number = 0;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -128,10 +129,14 @@ export class BlackholeSimulator {
   }
 
   private update(currentTime: number) {
-    // Use elapsed time in seconds (matching WebGL2 version)
-    const elapsedSeconds = (currentTime - this.startTime) / 1000.0;
-    // Apply animation speed multiplier
-    this.blackHole.setTime(elapsedSeconds * this.blackHole.animationSpeed);
+    // Calculate delta time in seconds for frame-rate independent animation
+    const deltaTime = this.lastUpdateTime > 0 
+      ? (currentTime - this.lastUpdateTime) / 1000.0 
+      : 0.016; // Default to ~60fps for first frame
+    this.lastUpdateTime = currentTime;
+    
+    // Use delta time accumulation for frame-rate independent animation
+    this.blackHole.advanceTime(deltaTime * this.blackHole.animationSpeed);
     this.updateUniformData();
   }
 

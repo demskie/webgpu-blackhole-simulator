@@ -16,7 +16,7 @@ export class RenderingManager {
   private cameraMoving: boolean = false;
 
   // Scratch arrays to avoid per-frame allocations
-  private uniformScratch: Float32Array = new Float32Array(40);
+  private uniformScratch: Float32Array = new Float32Array(48);
   private resolutionScratch: Float32Array = new Float32Array(2);
 
   // Frame counter for performance profiling
@@ -98,20 +98,24 @@ export class RenderingManager {
     this.uniformScratch[25] = bh.stepMaxScale;
     this.uniformScratch[26] = bh.stepNearFactor;
     this.uniformScratch[27] = bh.stepFarFactor;
+    // Event horizon rejection parameters
+    this.uniformScratch[28] = bh.eventHorizonRadius;
+    this.uniformScratch[29] = bh.enableEventHorizon ? 1.0 : 0.0;
     // Palette colors + color intensity
-    this.uniformScratch[28] = bh.centerColor[0];
-    this.uniformScratch[29] = bh.centerColor[1];
-    this.uniformScratch[30] = bh.centerColor[2];
-    this.uniformScratch[31] = bh.discInnerColor[0];
-    this.uniformScratch[32] = bh.discInnerColor[1];
-    this.uniformScratch[33] = bh.discInnerColor[2];
-    // this.uniformScratch[34] = bh.discOuterColor[0];
-    // this.uniformScratch[35] = bh.discOuterColor[1];
-    // this.uniformScratch[36] = bh.discOuterColor[2];
-    this.uniformScratch[37] = bh.colorIntensity;
-    // Repurpose index 38 as color fade width; 39 stays as fade start
-    this.uniformScratch[38] = bh.colorFadeWidth;
-    this.uniformScratch[39] = bh.colorInnerToCenterPoint;
+    this.uniformScratch[30] = bh.centerColor[0];
+    this.uniformScratch[31] = bh.centerColor[1];
+    this.uniformScratch[32] = bh.centerColor[2];
+    this.uniformScratch[33] = bh.discInnerColor[0];
+    this.uniformScratch[34] = bh.discInnerColor[1];
+    this.uniformScratch[35] = bh.discInnerColor[2];
+    // this.uniformScratch[36] = bh.discOuterColor[0];
+    // this.uniformScratch[37] = bh.discOuterColor[1];
+    // this.uniformScratch[38] = bh.discOuterColor[2];
+    this.uniformScratch[39] = bh.colorIntensity;
+    // Repurpose index 40 as color fade width; 41 stays as fade start
+    this.uniformScratch[40] = bh.colorFadeWidth;
+    this.uniformScratch[41] = bh.colorInnerToCenterPoint;
+    this.uniformScratch[42] = bh.discVerticalFalloff;
     device.queue.writeBuffer(
       resources.getUniformBuffer(),
       0,

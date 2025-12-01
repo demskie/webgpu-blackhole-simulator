@@ -29,6 +29,9 @@ struct Uniforms {
   stepMaxScale: f32,
   stepNearFactor: f32,
   stepFarFactor: f32,
+  // Event horizon rejection parameters
+  eventHorizonRadius: f32,
+  enableEventHorizon: f32,
   // Palette colors (added for in-shader colorization)
   centerColorR: f32,
   centerColorG: f32,
@@ -44,6 +47,8 @@ struct Uniforms {
   // Color transition thresholds along proximity t (0 outer -> 1 inner)
   colorOuterToInnerPoint: f32,
   colorInnerToCenterPoint: f32,
+  // Vertical thickness falloff at outer edge (0.0-1.0, higher = thicker clouds far from equator)
+  discVerticalFalloff: f32,
 }
 
 struct Resolution {
@@ -210,12 +215,13 @@ fn calculateIntensity(radialGradient: f32, distFromCenter: f32, bloomFactor: f32
   return saturate_f32(baseIntensity + bloomContribution);
 }
 
-fn haze(color: ptr<function, vec3<f32>>, pos: vec3<f32>, alpha: f32, invIterations: f32) {
+fn haze(color: ptr<function, vec3<f32>>, pos: vec3<f32>, alpha: f32, stepWeight: f32) {
   let t = vec2<f32>(1.0, 0.01);
   let torusDist = length(sdTorus(pos + vec3<f32>(0.0, -0.05, 0.0), t));
   var bloomDisc = 1.0 / (torusDist * torusDist + 0.001);
   bloomDisc *= select(1.0, 0.0, length(pos) < 0.5);
-  let hazeAmount = bloomDisc * (uniforms.hazeIntensity * invIterations) * (1.0 - alpha * 1.0);
+  // Haze intensity scales with step weight so total accumulation is consistent across iteration counts
+  let hazeAmount = bloomDisc * uniforms.hazeIntensity * stepWeight * (1.0 - alpha * 1.0);
 
   // Calculate radial gradient for color based on distance from disc center
   let discInner = uniforms.discRadius - uniforms.discWidth * 0.5;
@@ -250,9 +256,13 @@ fn gasDisc(color: ptr<function, vec3<f32>>, alpha: ptr<function, f32>, pos: vec3
   let radialGradient = 1.0 - normalizedRadial;
   var coverage = pcurve(radialGradient, 4.0, 0.9);
 
-  // Preserve a minimum thickness near the outer rim so outer color can accumulate
+  // Use full thickness for vertical falloff so clouds far from equator aren't cut off
+  // Apply gentle tapering (sqrt) for visual effect without harsh darkening at outer edge
+  let verticalThickness = discThickness * mix(uniforms.discVerticalFalloff, 1.0, sqrt(radialGradient));
+  coverage *= saturate_f32(1.0 - abs(distFromDisc) / verticalThickness);
+
+  // Separate visual tapering for the disc edge appearance (doesn't affect vertical coverage)
   discThickness = max(0.35 * uniforms.discThickness, discThickness * radialGradient);
-  coverage *= saturate_f32(1.0 - abs(distFromDisc) / discThickness);
 
   let rg_inv = 1.0 - radialGradient;
   let dustGlow = 1.0 / (rg_inv * rg_inv * 290.0 + 0.002);
@@ -300,7 +310,10 @@ fn gasDisc(color: ptr<function, vec3<f32>>, alpha: ptr<function, f32>, pos: vec3
   let proceduralSample = textureSampleLevel(proceduralTexture, proceduralSampler, radialCoords.yx * vec2<f32>(0.15, 0.27), 0.0).r;
   dustIntensity *= pow(proceduralSample, uniforms.discTexturePower) * uniforms.discBrightness;
 
-  coverage = saturate_f32(coverage * 1200.0 * invIterations);
+  // Coverage is a material property independent of step count.
+  // Step size is already accounted for in the alpha blending accumulation.
+  // (Normalized from 1200 * invIterations, using reference of ~21 iterations: 1200/21 ≈ 57)
+  coverage = saturate_f32(coverage * 57.0);
   dustIntensity = max(0.0, dustIntensity);
   coverage *= pcurve(radialGradient, uniforms.discInnerFalloff, uniforms.discOuterFalloff);
 
@@ -389,9 +402,11 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   var raypos = eyepos + eyevec * travelled;
 
   let iterations = i32(uniforms.iterations);
+
   for (var i = 0; i < iterations; i++) {
     // Distance-based adaptive step scaling
     let r = length(raypos);
+
     let rNear = max(0.5, uniforms.discRadius - uniforms.discWidth * uniforms.stepNearFactor);
     let rFar  = uniforms.discRadius + uniforms.discWidth * uniforms.stepFarFactor;
     let t = smoothstep(rNear, rFar, r);
@@ -400,6 +415,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let stepWeight = invIterations * stepScale; // equals localStep / far
 
     warpSpace(&eyevec, &raypos, localStep);
+
     let rotatedPos = rotBH * raypos;
     gasDisc(&accumColor, &alpha, rotatedPos, stepWeight);
     haze(&accumColor, rotatedPos, alpha, stepWeight);

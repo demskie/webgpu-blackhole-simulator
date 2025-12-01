@@ -58,7 +58,7 @@ export class ResourceManager {
     // Create uniform buffer for black hole parameters
     this.uniformBuffer = device.createBuffer({
       label: "uniformBuffer",
-      size: 40 * 4, // 40 floats (added palette colors + colorIntensity + 2 thresholds)
+      size: 48 * 4, // 42 floats used (added event horizon params), rounded up to 48 for alignment
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 

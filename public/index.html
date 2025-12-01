@@ -177,6 +177,27 @@
                   />
                   <span id="labelStepFarFactor"></span>
                 </div>
+
+                <div class="slider">
+                  <label for="slEventHorizonRadius">event horizon radius</label
+                  ><br />
+                  <input
+                    type="range"
+                    min="0.01"
+                    max="2.0"
+                    step="0.01"
+                    class="slider"
+                    id="slEventHorizonRadius"
+                  />
+                  <span id="labelEventHorizonRadius"></span>
+                </div>
+
+                <div class="slider checkbox-slider">
+                  <label>
+                    <input type="checkbox" id="cbEnableEventHorizon" />
+                    enable event horizon rejection
+                  </label>
+                </div>
               </fieldset>
 
               <fieldset>
@@ -263,6 +284,20 @@
                     id="slDiscThickness"
                   />
                   <span id="labelDiscThickness"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slDiscVerticalFalloff">vertical falloff</label
+                  ><br />
+                  <input
+                    type="range"
+                    min="0.0"
+                    max="1.0"
+                    step="0.01"
+                    class="slider"
+                    id="slDiscVerticalFalloff"
+                  />
+                  <span id="labelDiscVerticalFalloff"></span>
                 </div>
 
                 <div class="slider">

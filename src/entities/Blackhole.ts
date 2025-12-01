@@ -9,7 +9,7 @@ export class Blackhole {
   // Core parameters
   time: number = 0;
   maxFrameRate: number = 30;
-  animationSpeed: number = 0.4;
+  animationSpeed: number = 1.2;
 
   // Camera parameters (rotation angles for RotateCamera function)
   cameraRotationX: number = 0.5;
@@ -39,12 +39,13 @@ export class Blackhole {
   discTemperatureRadiusFactor: number = 10000.0; // Temperature increase per unit radius
   discMinColorTemperature: number = 1000.0; // Min temperature for color mapping
   discMaxColorTemperature: number = 40000.0; // Max temperature for color mapping
-  discInnerFalloff: number = 4.5;
-  discOuterFalloff: number = 1.4;
-  discTexturePower: number = 0.1; // Power applied to procedural texture (higher = darker edges)
+  discInnerFalloff: number = 4.7;
+  discOuterFalloff: number = 1.8;
+  discTexturePower: number = 0.8; // Power applied to procedural texture (higher = darker edges)
   discMinCoverage: number = 0.0; // Min coverage to prevent outer edges going black
   discOuterTransparency: number = 0.0; // 0 = fully transparent outer edge, 1 = opaque
-  hazeIntensity: number = 25;
+  discVerticalFalloff: number = 1.0; // Min vertical thickness at outer edge (0.0-1.0, higher = thicker clouds far from equator)
+  hazeIntensity: number = 12;
   temporalMouseThreshold: number = 1.0;
 
   // Adaptive step scaling parameters
@@ -52,6 +53,10 @@ export class Blackhole {
   stepMaxScale: number = 1.85; // Max step scale (far from black hole)
   stepNearFactor: number = 0.6; // Factor for near radius calculation
   stepFarFactor: number = 1.2; // Factor for far radius calculation
+
+  // Event horizon rejection parameters (currently disabled - feature not working correctly)
+  eventHorizonRadius: number = 0.15; // Radius at which rays are absorbed (smaller = less aggressive)
+  enableEventHorizon: boolean = false; // Enable event horizon rejection
 
   // HDR and Bloom parameters
   exposure: number = 0.3; // Balanced for natural intensity preservation
@@ -90,8 +95,8 @@ export class Blackhole {
   }
 
   advanceTime(deltaTime: number) {
-    const timeScale = 0.06;
-    this.time += deltaTime * timeScale;
+    // Delta time is expected in seconds, already scaled by animationSpeed
+    this.time += deltaTime;
   }
 
   setTime(timeInSeconds: number) {
@@ -219,6 +224,11 @@ export class Blackhole {
     this.callbacks.onParametersChanged?.();
   }
 
+  setDiscVerticalFalloff(val: number) {
+    this.discVerticalFalloff = Math.max(0.0, Math.min(1.0, val));
+    this.callbacks.onParametersChanged?.();
+  }
+
   setHazeIntensity(val: number) {
     this.hazeIntensity = val;
     this.callbacks.onParametersChanged?.();
@@ -241,6 +251,16 @@ export class Blackhole {
 
   setStepFarFactor(val: number) {
     this.stepFarFactor = val;
+    this.callbacks.onParametersChanged?.();
+  }
+
+  setEventHorizonRadius(val: number) {
+    this.eventHorizonRadius = Math.max(0.01, val);
+    this.callbacks.onParametersChanged?.();
+  }
+
+  setEnableEventHorizon(val: boolean) {
+    this.enableEventHorizon = val;
     this.callbacks.onParametersChanged?.();
   }
 
@@ -365,40 +385,5 @@ export class Blackhole {
   setColorFadeWidth(val: number) {
     this.colorFadeWidth = Math.max(0.001, Math.min(1.0, val));
     this.callbacks.onParametersChanged?.();
-  }
-
-  toGpuArray(): Float32Array {
-    // Convert degrees to radians for shader
-    const DEG_TO_RAD = Math.PI / 180;
-
-    return new Float32Array([
-      this.time,
-      this.iterations,
-      this.warpAmount,
-      this.discRadius,
-      this.discWidth,
-      this.discThickness,
-      this.discSpeed,
-      this.discBrightness,
-      this.discTemperature,
-      this.discInnerFalloff,
-      this.discOuterFalloff,
-      this.discTexturePower,
-      this.discMinCoverage,
-      this.hazeIntensity,
-      this.getTemporalBlendWeight(),
-      this.cameraRotationX,
-      this.cameraRotationY,
-      this.brightnessFactor,
-      this.cameraPanX,
-      this.cameraPanY,
-      this.blackHoleRotationX * DEG_TO_RAD,
-      this.blackHoleRotationY * DEG_TO_RAD,
-      this.blackHoleRotationZ * DEG_TO_RAD,
-      this.stepMinScale,
-      this.stepMaxScale,
-      this.stepNearFactor,
-      this.stepFarFactor,
-    ]);
   }
 }

@@ -152,6 +152,14 @@ export class UIManager {
       "stepFarFactor"
     );
 
+    // Event horizon controls
+    this.initializeSlider(
+      "slEventHorizonRadius",
+      "labelEventHorizonRadius",
+      "eventHorizonRadius"
+    );
+    this.initializeCheckbox("cbEnableEventHorizon", "enableEventHorizon");
+
     // Black Hole Rotation sliders (degrees)
     this.initializeRotationSlider(
       "slBlackholeRotationX",
@@ -175,6 +183,11 @@ export class UIManager {
       "slDiscThickness",
       "labelDiscThickness",
       "discThickness"
+    );
+    this.initializeSlider(
+      "slDiscVerticalFalloff",
+      "labelDiscVerticalFalloff",
+      "discVerticalFalloff"
     );
     this.initializeSlider("slDiscSpeed", "labelDiscSpeed", "discSpeed");
     this.initializeSlider(
@@ -388,6 +401,23 @@ export class UIManager {
       }
       // Update changed state
       this.updateChangedClass(slider, prop, degrees);
+    };
+  }
+
+  private initializeCheckbox(id: string, prop: string) {
+    const checkbox = document.getElementById(id) as HTMLInputElement;
+    if (!checkbox) return;
+
+    const currentValue = (this.simulator.blackHole as any)[prop];
+    checkbox.checked = currentValue;
+
+    checkbox.onchange = () => {
+      const newValue = checkbox.checked;
+      const methodName = `set${prop.charAt(0).toUpperCase()}${prop.slice(1)}`;
+      const method = (this.simulator.blackHole as any)[methodName];
+      if (typeof method === "function") {
+        method.call(this.simulator.blackHole, newValue);
+      }
     };
   }
 
