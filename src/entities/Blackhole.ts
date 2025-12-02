@@ -46,7 +46,11 @@ export class Blackhole {
   discTexturePower: number = 0.1; // Power applied to procedural texture (higher = darker edges)
   discMinCoverage: number = 0.0; // Min coverage to prevent outer edges going black
   bloomVerticalFalloff: number = 1.7; // Controls how quickly brightness falls off vertically with disc thickness
-  hazeIntensity: number = 20;
+  hazeIntensity: number = 6;
+  hazeRadius: number = 0.9;
+  hazeHeight: number = 0.0009;
+  hazeSpread: number = 2.0;
+  hazeFalloff: number = 0.001;
   temporalMouseThreshold: number = 1.0;
 
   // Noise octave parameters (for procedural disc textures)
@@ -230,6 +234,26 @@ export class Blackhole {
 
   setHazeIntensity(val: number) {
     this.hazeIntensity = val;
+    this.callbacks.onParametersChanged?.();
+  }
+
+  setHazeRadius(val: number) {
+    this.hazeRadius = val;
+    this.callbacks.onParametersChanged?.();
+  }
+
+  setHazeHeight(val: number) {
+    this.hazeHeight = val;
+    this.callbacks.onParametersChanged?.();
+  }
+
+  setHazeSpread(val: number) {
+    this.hazeSpread = val;
+    this.callbacks.onParametersChanged?.();
+  }
+
+  setHazeFalloff(val: number) {
+    this.hazeFalloff = val;
     this.callbacks.onParametersChanged?.();
   }
 

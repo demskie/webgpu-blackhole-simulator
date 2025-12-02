@@ -108,7 +108,8 @@ export class BlackholeSimulator {
       device: device,
       format: presentationFormat,
       alphaMode: "opaque",
-    });
+      presentMode: "immediate",
+    } as any);
 
     return new BlackholeSimulator(canvas, device, context, presentationFormat);
   }
@@ -166,7 +167,13 @@ export class BlackholeSimulator {
       this.render();
       this.performanceProfiler.endCpuFrameTiming();
     }
-    window.requestAnimationFrame(() => this.mainLoop());
+    
+    // Use setTimeout for unlocked framerate to bypass vsync/browser caps
+    if (this.blackHole.maxFrameRate >= 120) {
+      setTimeout(() => this.mainLoop(), 0);
+    } else {
+      window.requestAnimationFrame(() => this.mainLoop());
+    }
   }
 
   getDevice(): GPUDevice {

@@ -113,6 +113,10 @@ export class RenderingManager {
     this.uniformScratch[38] = bh.colorInnerToCenterPoint;
     this.uniformScratch[39] = bh.bloomVerticalFalloff;
     this.uniformScratch[40] = bh.eventHorizonCutoff;
+    this.uniformScratch[41] = bh.hazeRadius;
+    this.uniformScratch[42] = bh.hazeHeight;
+    this.uniformScratch[43] = bh.hazeFalloff;
+    this.uniformScratch[44] = bh.hazeSpread;
     device.queue.writeBuffer(
       resources.getUniformBuffer(),
       0,

@@ -241,6 +241,10 @@ export class UIManager {
       "labelHazeIntensity",
       "hazeIntensity"
     );
+    this.initializeSlider("slHazeRadius", "labelHazeRadius", "hazeRadius");
+    this.initializeSlider("slHazeHeight", "labelHazeHeight", "hazeHeight");
+    this.initializeSlider("slHazeSpread", "labelHazeSpread", "hazeSpread");
+    this.initializeSlider("slHazeFalloff", "labelHazeFalloff", "hazeFalloff");
     this.initializeSlider(
       "slNoise1Octaves",
       "labelNoise1Octaves",
@@ -359,13 +363,22 @@ export class UIManager {
 
     const currentValue = (this.simulator.blackHole as any)[prop];
     slider.value = String(currentValue);
-    label.innerHTML = slider.value;
+    
+    if (prop === "maxFrameRate" && currentValue >= 120) {
+      label.innerHTML = "uncapped";
+    } else {
+      label.innerHTML = slider.value;
+    }
 
     // Check initial state
     this.updateChangedClass(slider, prop, currentValue);
 
     slider.oninput = () => {
-      label.innerHTML = slider.value;
+      if (prop === "maxFrameRate" && parseFloat(slider.value) >= 120) {
+        label.innerHTML = "uncapped";
+      } else {
+        label.innerHTML = slider.value;
+      }
       const newValue = parseFloat(slider.value);
       const methodName = `set${prop.charAt(0).toUpperCase()}${prop.slice(1)}`;
       const method = (this.simulator.blackHole as any)[methodName];

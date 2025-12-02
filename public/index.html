@@ -475,6 +475,62 @@
                 </div>
 
                 <div class="slider">
+                  <label for="slHazeRadius">haze radius</label><br />
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="4.0"
+                    step="0.1"
+                    class="slider"
+                    id="slHazeRadius"
+                  />
+                  <span id="labelHazeRadius"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slHazeHeight">haze height</label><br />
+                  <input
+                    type="range"
+                    min="0.001"
+                    max="0.5"
+                    step="0.001"
+                    class="slider"
+                    id="slHazeHeight"
+                    title="Thickness of the torus ring (minor radius)"
+                  />
+                  <span id="labelHazeHeight"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slHazeSpread">haze spread</label><br />
+                  <input
+                    type="range"
+                    min="0.01"
+                    max="2.0"
+                    step="0.01"
+                    class="slider"
+                    id="slHazeSpread"
+                    title="Apparent width/spread of the glow"
+                  />
+                  <span id="labelHazeSpread"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slHazeFalloff">haze falloff (sharpness)</label
+                  ><br />
+                  <input
+                    type="range"
+                    min="0.0001"
+                    max="0.05"
+                    step="0.0001"
+                    class="slider"
+                    id="slHazeFalloff"
+                    title="Controls the sharpness of the haze (lower = sharper)"
+                  />
+                  <span id="labelHazeFalloff"></span>
+                </div>
+
+                <div class="slider">
                   <label for="slNoise1Octaves">noise 1 octaves (fine)</label
                   ><br />
                   <input

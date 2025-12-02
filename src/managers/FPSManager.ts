@@ -55,7 +55,7 @@ export class FPSManager {
 
     // Update target frame time based on maxFrameRate setting (only if not unlocked)
     if (!isUnlocked) {
-      this.targetFrameTime = 1000 / Math.max(1, Math.min(119, maxFrameRate));
+      this.targetFrameTime = 1000 / Math.max(1, maxFrameRate);
     }
 
     // Cap deltaTime to prevent large jumps, but allow it to be at least 2x the target frame time

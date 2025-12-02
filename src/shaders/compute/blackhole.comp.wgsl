@@ -47,6 +47,10 @@ struct Uniforms {
   bloomVerticalFalloff: f32,
   // Event Horizon Cutoff
   eventHorizonCutoff: f32,
+  hazeRadius: f32,
+  hazeHeight: f32,
+  hazeFalloff: f32,
+  hazeSpread: f32,
 }
 
 struct Resolution {
@@ -203,10 +207,16 @@ fn calculateIntensity(radialGradient: f32, distFromCenter: f32, bloomFactor: f32
 }
 
 fn haze(color: ptr<function, vec3<f32>>, pos: vec3<f32>, alpha: f32, stepWeight: f32) {
-  let t = vec2<f32>(1.0, 0.01);
+  let t = vec2<f32>(uniforms.hazeRadius, uniforms.hazeHeight);
   let torusDist = length(sdTorus(pos + vec3<f32>(0.0, -0.05, 0.0), t));
-  var bloomDisc = 1.0 / (torusDist * torusDist + 0.001);
-  bloomDisc *= select(1.0, 0.0, length(pos) < 0.5);
+
+  // Use hazeSpread to stretch/widen the falloff
+  // hazeSpread controls the divisor: larger spread = smaller divisor = wider glow
+  let spread = max(0.001, uniforms.hazeSpread);
+  let normalizedDist = torusDist / spread;
+
+  var bloomDisc = 1.0 / (normalizedDist * normalizedDist + uniforms.hazeFalloff);
+  bloomDisc *= select(1.0, 0.0, length(pos) < uniforms.hazeRadius * 0.5);
   // Haze intensity scales with step weight so total accumulation is consistent across iteration counts
   let hazeAmount = bloomDisc * uniforms.hazeIntensity * stepWeight * (1.0 - alpha * 1.0);
 
