@@ -1,5 +1,5 @@
 import { BlackholeSimulator } from "../BlackholeSimulator";
-import noisePrecomputeWGSL from "../shaders/compute/noise-precompute.comp.wgsl";
+import discVolumeNoiseWGSL from "../shaders/compute/disc-volume-noise.comp.wgsl";
 
 export interface NoiseTextures {
   noise1Texture: GPUTexture;
@@ -19,15 +19,22 @@ export class NoisePrecompute {
   private noise1Texture: GPUTexture | null = null;
   private noise2Texture: GPUTexture | null = null;
 
-  // Compute pipeline for generating noise
-  private computePipeline: GPUComputePipeline | null = null;
+  // Bind group layout (shared between pipelines)
   private bindGroupLayout: GPUBindGroupLayout | null = null;
   private bindGroup1: GPUBindGroup | null = null;
   private bindGroup2: GPUBindGroup | null = null;
 
+  // Uniform buffer for noise parameters
+  private noise1ParamsBuffer: GPUBuffer | null = null;
+  private noise2ParamsBuffer: GPUBuffer | null = null;
+
   // Source noise texture (2D)
   private sourceNoiseTexture: GPUTexture | null = null;
   private sourceNoiseSampler: GPUSampler | null = null;
+
+  // Current octave counts
+  private currentNoise1Octaves: number = 6;
+  private currentNoise2Octaves: number = 8;
 
   constructor(simulator: BlackholeSimulator) {
     this.device = simulator.device;
@@ -38,7 +45,7 @@ export class NoisePrecompute {
     console.log("🔴 Setting up NoisePrecompute");
     this.createSourceNoiseTexture();
     this.createNoise3DTextures();
-    this.createComputePipeline();
+    this.createParamsBuffers();
     this.generateNoiseTextures();
   }
 
@@ -99,6 +106,21 @@ export class NoisePrecompute {
     });
   }
 
+  private createParamsBuffers() {
+    // Create uniform buffers for noise parameters (16 bytes each: 1 u32 + 3 padding)
+    this.noise1ParamsBuffer = this.device.createBuffer({
+      label: "noise1ParamsBuffer",
+      size: 16,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
+    this.noise2ParamsBuffer = this.device.createBuffer({
+      label: "noise2ParamsBuffer",
+      size: 16,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+  }
+
   private getBindGroupLayout(): GPUBindGroupLayout {
     if (!this.bindGroupLayout) {
       this.bindGroupLayout = this.device.createBindGroupLayout({
@@ -126,31 +148,15 @@ export class NoisePrecompute {
               viewDimension: "3d",
             },
           },
+          {
+            binding: 3,
+            visibility: GPUShaderStage.COMPUTE,
+            buffer: { type: "uniform" },
+          },
         ],
       });
     }
     return this.bindGroupLayout;
-  }
-
-  private createComputePipeline() {
-    console.log("🔴 Creating noise precompute pipeline");
-    
-    const pipelineLayout = this.device.createPipelineLayout({
-      label: "noisePrecomputePipelineLayout",
-      bindGroupLayouts: [this.getBindGroupLayout()],
-    });
-
-    this.computePipeline = this.device.createComputePipeline({
-      label: "noisePrecomputePipeline",
-      layout: pipelineLayout,
-      compute: {
-        module: this.device.createShaderModule({ code: noisePrecomputeWGSL }),
-        entryPoint: "main",
-        constants: {
-          NOISE_TYPE: 0, // Will be overridden for each noise type
-        },
-      },
-    });
   }
 
   private createBindGroups() {
@@ -175,6 +181,10 @@ export class NoisePrecompute {
           binding: 2,
           resource: this.noise1Texture.createView(),
         },
+        {
+          binding: 3,
+          resource: { buffer: this.noise1ParamsBuffer! },
+        },
       ],
     });
 
@@ -195,20 +205,31 @@ export class NoisePrecompute {
           binding: 2,
           resource: this.noise2Texture.createView(),
         },
+        {
+          binding: 3,
+          resource: { buffer: this.noise2ParamsBuffer! },
+        },
       ],
     });
   }
 
   private generateNoiseTextures() {
-    console.log("🔴 Generating precomputed noise textures");
-    
-    if (!this.computePipeline) {
-      throw new Error("Compute pipeline not created");
-    }
+    // Get current octave counts from the blackhole entity
+    const bh = this.simulator().blackHole;
+    this.currentNoise1Octaves = bh.noise1Octaves;
+    this.currentNoise2Octaves = bh.noise2Octaves;
+
+    console.log(`🔴 Generating precomputed noise textures (noise1: ${this.currentNoise1Octaves} octaves, noise2: ${this.currentNoise2Octaves} octaves)`);
+
+    // Update uniform buffers with octave counts
+    const noise1Data = new Uint32Array([this.currentNoise1Octaves, 0, 0, 0]);
+    const noise2Data = new Uint32Array([this.currentNoise2Octaves, 0, 0, 0]);
+    this.device.queue.writeBuffer(this.noise1ParamsBuffer!, 0, noise1Data);
+    this.device.queue.writeBuffer(this.noise2ParamsBuffer!, 0, noise2Data);
 
     this.createBindGroups();
 
-    // Need to create two versions of the compute pipeline with different constants
+    // Create pipeline layout
     const pipelineLayout = this.device.createPipelineLayout({
       label: "noisePrecomputePipelineLayout",
       bindGroupLayouts: [this.getBindGroupLayout()],
@@ -218,10 +239,10 @@ export class NoisePrecompute {
       label: "noisePrecomputePipeline1",
       layout: pipelineLayout,
       compute: {
-        module: this.device.createShaderModule({ code: noisePrecomputeWGSL }),
+        module: this.device.createShaderModule({ code: discVolumeNoiseWGSL }),
         entryPoint: "main",
         constants: {
-          NOISE_TYPE: 1, // For noise1 (4 octaves)
+          NOISE_TYPE: 1, // For noise1 (fine detail)
         },
       },
     });
@@ -230,10 +251,10 @@ export class NoisePrecompute {
       label: "noisePrecomputePipeline2",
       layout: pipelineLayout,
       compute: {
-        module: this.device.createShaderModule({ code: noisePrecomputeWGSL }),
+        module: this.device.createShaderModule({ code: discVolumeNoiseWGSL }),
         entryPoint: "main",
         constants: {
-          NOISE_TYPE: 2, // For noise2 (6 octaves)
+          NOISE_TYPE: 2, // For noise2 (coarse detail)
         },
       },
     });
@@ -267,6 +288,24 @@ export class NoisePrecompute {
     this.device.queue.submit([commandEncoder.finish()]);
   }
 
+  /**
+   * Regenerates the noise textures with current parameters from the blackhole entity.
+   * Call this when noise octave parameters change.
+   */
+  regenerate() {
+    const bh = this.simulator().blackHole;
+    
+    // Only regenerate if octave counts have actually changed
+    if (bh.noise1Octaves === this.currentNoise1Octaves && 
+        bh.noise2Octaves === this.currentNoise2Octaves) {
+      console.log("🔴 Noise parameters unchanged, skipping regeneration");
+      return;
+    }
+
+    console.log(`🔴 Regenerating noise textures (noise1: ${bh.noise1Octaves} octaves, noise2: ${bh.noise2Octaves} octaves)`);
+    this.generateNoiseTextures();
+  }
+
   getNoiseTextures(): NoiseTextures {
     if (!this.noise1Texture || !this.noise2Texture) {
       throw new Error("Noise textures not initialized");
@@ -282,10 +321,13 @@ export class NoisePrecompute {
     this.sourceNoiseTexture?.destroy();
     this.noise1Texture?.destroy();
     this.noise2Texture?.destroy();
+    this.noise1ParamsBuffer?.destroy();
+    this.noise2ParamsBuffer?.destroy();
     this.bindGroup1 = null;
     this.bindGroup2 = null;
-    this.computePipeline = null;
     this.bindGroupLayout = null;
     this.sourceNoiseSampler = null;
+    this.noise1ParamsBuffer = null;
+    this.noise2ParamsBuffer = null;
   }
 }

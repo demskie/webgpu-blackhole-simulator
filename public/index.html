@@ -177,27 +177,6 @@
                   />
                   <span id="labelStepFarFactor"></span>
                 </div>
-
-                <div class="slider">
-                  <label for="slEventHorizonRadius">event horizon radius</label
-                  ><br />
-                  <input
-                    type="range"
-                    min="0.01"
-                    max="2.0"
-                    step="0.01"
-                    class="slider"
-                    id="slEventHorizonRadius"
-                  />
-                  <span id="labelEventHorizonRadius"></span>
-                </div>
-
-                <div class="slider checkbox-slider">
-                  <label>
-                    <input type="checkbox" id="cbEnableEventHorizon" />
-                    enable event horizon rejection
-                  </label>
-                </div>
               </fieldset>
 
               <fieldset>
@@ -248,12 +227,12 @@
               <fieldset>
                 <h3>Accretion Disc</h3>
                 <div class="slider">
-                  <label for="slDiscRadius">disc radius</label><br />
+                  <label for="slDiscRadius">disc inner edge</label><br />
                   <input
                     type="range"
-                    min="1"
-                    max="10"
-                    step="0.1"
+                    min="0.1"
+                    max="3"
+                    step="0.05"
                     class="slider"
                     id="slDiscRadius"
                   />
@@ -287,17 +266,33 @@
                 </div>
 
                 <div class="slider">
-                  <label for="slDiscVerticalFalloff">vertical falloff</label
+                  <label for="slBloomVerticalFalloff"
+                    >bloom vertical falloff</label
                   ><br />
                   <input
                     type="range"
-                    min="0.0"
-                    max="1.0"
-                    step="0.01"
+                    min="0"
+                    max="3"
+                    step="0.1"
                     class="slider"
-                    id="slDiscVerticalFalloff"
+                    id="slBloomVerticalFalloff"
                   />
-                  <span id="labelDiscVerticalFalloff"></span>
+                  <span id="labelBloomVerticalFalloff"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slEventHorizonCutoff">event horizon cutoff</label
+                  ><br />
+                  <input
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.05"
+                    class="slider"
+                    id="slEventHorizonCutoff"
+                    title="Control how aggressively rays are terminated near the black hole"
+                  />
+                  <span id="labelEventHorizonCutoff"></span>
                 </div>
 
                 <div class="slider">
@@ -444,9 +439,9 @@
                   ><br />
                   <input
                     type="range"
-                    min="0.1"
+                    min="0"
                     max="5"
-                    step="0.1"
+                    step="0.01"
                     class="slider"
                     id="slDiscTexturePower"
                   />
@@ -467,21 +462,6 @@
                 </div>
 
                 <div class="slider">
-                  <label for="slDiscOuterTransparency"
-                    >disc outer transparency</label
-                  ><br />
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    class="slider"
-                    id="slDiscOuterTransparency"
-                  />
-                  <span id="labelDiscOuterTransparency"></span>
-                </div>
-
-                <div class="slider">
                   <label for="slHazeIntensity">haze intensity</label><br />
                   <input
                     type="range"
@@ -492,6 +472,36 @@
                     id="slHazeIntensity"
                   />
                   <span id="labelHazeIntensity"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slNoise1Octaves">noise 1 octaves (fine)</label
+                  ><br />
+                  <input
+                    type="range"
+                    min="1"
+                    max="16"
+                    step="1"
+                    class="slider"
+                    id="slNoise1Octaves"
+                    title="Number of octaves for fine detail noise pattern (default: 6)"
+                  />
+                  <span id="labelNoise1Octaves"></span>
+                </div>
+
+                <div class="slider">
+                  <label for="slNoise2Octaves">noise 2 octaves (coarse)</label
+                  ><br />
+                  <input
+                    type="range"
+                    min="1"
+                    max="16"
+                    step="1"
+                    class="slider"
+                    id="slNoise2Octaves"
+                    title="Number of octaves for coarse detail noise pattern (default: 8)"
+                  />
+                  <span id="labelNoise2Octaves"></span>
                 </div>
               </fieldset>
 

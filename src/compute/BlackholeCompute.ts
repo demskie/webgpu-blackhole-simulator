@@ -45,6 +45,19 @@ export class BlackholeCompute {
     this.computeBindGroupLayout = null;
   }
 
+  /**
+   * Regenerates the noise textures with current parameters.
+   * Call this when noise octave parameters change.
+   */
+  regenerateNoiseTextures() {
+    if (this.noisePrecompute) {
+      this.noisePrecompute.regenerate();
+      // Invalidate bind groups so they get recreated with new texture views
+      this.computeBindGroup = null;
+      this.computeBindGroupAlt = null;
+    }
+  }
+
   private getComputeBindGroupLayout(): GPUBindGroupLayout {
     if (this.computeBindGroupLayout) return this.computeBindGroupLayout;
     this.computeBindGroupLayout = this.device.createBindGroupLayout({
@@ -72,26 +85,20 @@ export class BlackholeCompute {
           visibility: GPUShaderStage.COMPUTE,
           texture: { sampleType: "float" },
         },
-        { binding: 6, visibility: GPUShaderStage.COMPUTE, sampler: {} },
         {
-          binding: 7,
-          visibility: GPUShaderStage.COMPUTE,
-          texture: { sampleType: "float" },
-        },
-        {
-          binding: 8,
+          binding: 6,
           visibility: GPUShaderStage.COMPUTE,
           storageTexture: { access: "write-only", format: "rgba16float" },
         },
         // 3D noise textures and sampler
-        { binding: 9, visibility: GPUShaderStage.COMPUTE, sampler: {} },
+        { binding: 7, visibility: GPUShaderStage.COMPUTE, sampler: {} },
         {
-          binding: 10,
+          binding: 8,
           visibility: GPUShaderStage.COMPUTE,
           texture: { sampleType: "float", viewDimension: "3d" },
         },
         {
-          binding: 11,
+          binding: 9,
           visibility: GPUShaderStage.COMPUTE,
           texture: { sampleType: "float", viewDimension: "3d" },
         },
@@ -135,22 +142,20 @@ export class BlackholeCompute {
       entries: [
         { binding: 0, resource: { buffer: resources.getUniformBuffer() } },
         { binding: 1, resource: { buffer: resources.getResolutionBuffer() } },
-        { binding: 2, resource: resources.getRepeatSampler() }, // noise sampler (repeat)
-        { binding: 3, resource: resources.getNoiseView() },
-        { binding: 4, resource: resources.getRepeatSampler() }, // procedural sampler (repeat)
-        { binding: 5, resource: resources.getProceduralView() },
-        { binding: 6, resource: resources.getSampler() }, // clamp sampler for previous
-        { binding: 7, resource: previousView },
-        { binding: 8, resource: currentView }, // Write directly to ping-pong texture
+        { binding: 2, resource: resources.getRepeatSampler() }, // procedural sampler (repeat)
+        { binding: 3, resource: resources.getProceduralView() },
+        { binding: 4, resource: resources.getSampler() }, // clamp sampler for previous
+        { binding: 5, resource: previousView },
+        { binding: 6, resource: currentView }, // Write directly to ping-pong texture
         // 3D noise textures
-        { binding: 9, resource: this.noise3DSampler! },
+        { binding: 7, resource: this.noise3DSampler! },
         {
-          binding: 10,
+          binding: 8,
           resource:
             this.noisePrecompute!.getNoiseTextures().noise1Texture.createView(),
         },
         {
-          binding: 11,
+          binding: 9,
           resource:
             this.noisePrecompute!.getNoiseTextures().noise2Texture.createView(),
         },

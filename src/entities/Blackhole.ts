@@ -3,13 +3,14 @@ export interface BlackholeCallbacks {
   onToneParametersChanged?: () => void;
   onBloomParametersChanged?: () => void;
   onTemperatureChanged?: () => void;
+  onNoiseParametersChanged?: () => void;
 }
 
 export class Blackhole {
   // Core parameters
   time: number = 0;
   maxFrameRate: number = 30;
-  animationSpeed: number = 1.2;
+  animationSpeed: number = 0.4;
 
   // Camera parameters (rotation angles for RotateCamera function)
   cameraRotationX: number = 0.5;
@@ -23,40 +24,40 @@ export class Blackhole {
   blackHoleRotationZ: number = 20.0;
 
   // Raymarching parameters
-  iterations: number = 21;
+  iterations: number = 30;
   enableTemporalAA: boolean = true;
   temporalAAFrames: number = 2; // Number of frames to blend for temporal AA (6 frames = 83.3% history weight)
-  warpAmount: number = 3.3;
+  warpAmount: number = 2.1;
   brightnessFactor: number = 151.0; // Back to original since we're preserving intensity better
 
   // Accretion disc parameters
-  discRadius: number = 3.1;
-  discWidth: number = 5.7;
-  discThickness: number = 0.02;
+  // discRadius = inner edge of disc (near black hole), discWidth = how far outward the disc extends
+  discRadius: number = 0.15;
+  discWidth: number = 2.3;
+  discThickness: number = 0.2;
   discSpeed: number = 0.06;
-  discBrightness: number = 7; // Adjusted for post-tone-mapping colorization
+  discBrightness: number = 5.5; // Adjusted for post-tone-mapping colorization
   discTemperature: number = 6000; // Base temperature in Kelvin
   discTemperatureRadiusFactor: number = 10000.0; // Temperature increase per unit radius
   discMinColorTemperature: number = 1000.0; // Min temperature for color mapping
   discMaxColorTemperature: number = 40000.0; // Max temperature for color mapping
   discInnerFalloff: number = 4.7;
   discOuterFalloff: number = 1.8;
-  discTexturePower: number = 0.8; // Power applied to procedural texture (higher = darker edges)
+  discTexturePower: number = 0.1; // Power applied to procedural texture (higher = darker edges)
   discMinCoverage: number = 0.0; // Min coverage to prevent outer edges going black
-  discOuterTransparency: number = 0.0; // 0 = fully transparent outer edge, 1 = opaque
-  discVerticalFalloff: number = 1.0; // Min vertical thickness at outer edge (0.0-1.0, higher = thicker clouds far from equator)
-  hazeIntensity: number = 12;
+  bloomVerticalFalloff: number = 1.7; // Controls how quickly brightness falls off vertically with disc thickness
+  hazeIntensity: number = 20;
   temporalMouseThreshold: number = 1.0;
+
+  // Noise octave parameters (for procedural disc textures)
+  noise1Octaves: number = 6; // Noise pattern 1 octaves (default 6, scales 3-96)
+  noise2Octaves: number = 7; // Noise pattern 2 octaves (default 8, scales 3-368)
 
   // Adaptive step scaling parameters
   stepMinScale: number = 0.35; // Min step scale (near black hole)
   stepMaxScale: number = 1.85; // Max step scale (far from black hole)
   stepNearFactor: number = 0.6; // Factor for near radius calculation
   stepFarFactor: number = 1.2; // Factor for far radius calculation
-
-  // Event horizon rejection parameters (currently disabled - feature not working correctly)
-  eventHorizonRadius: number = 0.15; // Radius at which rays are absorbed (smaller = less aggressive)
-  enableEventHorizon: boolean = false; // Enable event horizon rejection
 
   // HDR and Bloom parameters
   exposure: number = 0.3; // Balanced for natural intensity preservation
@@ -83,6 +84,9 @@ export class Blackhole {
   colorOuterToInnerPoint: number = 0.4; // unused now; kept for compatibility
   colorInnerToCenterPoint: number = 0.87; // fade start (inner->center)
   colorFadeWidth: number = 1.0; // width of fade (how quickly colors transition)
+
+  // Event Horizon
+  eventHorizonCutoff: number = 0.5; // Multiplier for discRadius to determine cutoff (0.1 to 1.0)
 
   private callbacks: BlackholeCallbacks;
 
@@ -219,13 +223,8 @@ export class Blackhole {
     this.callbacks.onParametersChanged?.();
   }
 
-  setDiscOuterTransparency(val: number) {
-    this.discOuterTransparency = val;
-    this.callbacks.onParametersChanged?.();
-  }
-
-  setDiscVerticalFalloff(val: number) {
-    this.discVerticalFalloff = Math.max(0.0, Math.min(1.0, val));
+  setBloomVerticalFalloff(val: number) {
+    this.bloomVerticalFalloff = val;
     this.callbacks.onParametersChanged?.();
   }
 
@@ -251,16 +250,6 @@ export class Blackhole {
 
   setStepFarFactor(val: number) {
     this.stepFarFactor = val;
-    this.callbacks.onParametersChanged?.();
-  }
-
-  setEventHorizonRadius(val: number) {
-    this.eventHorizonRadius = Math.max(0.01, val);
-    this.callbacks.onParametersChanged?.();
-  }
-
-  setEnableEventHorizon(val: boolean) {
-    this.enableEventHorizon = val;
     this.callbacks.onParametersChanged?.();
   }
 
@@ -385,5 +374,21 @@ export class Blackhole {
   setColorFadeWidth(val: number) {
     this.colorFadeWidth = Math.max(0.001, Math.min(1.0, val));
     this.callbacks.onParametersChanged?.();
+  }
+
+  setEventHorizonCutoff(val: number) {
+    this.eventHorizonCutoff = Math.max(0.0, Math.min(2.0, val));
+    this.callbacks.onParametersChanged?.();
+  }
+
+  // Noise octave setters
+  setNoise1Octaves(val: number) {
+    this.noise1Octaves = Math.max(1, Math.min(16, Math.round(val)));
+    this.callbacks.onNoiseParametersChanged?.();
+  }
+
+  setNoise2Octaves(val: number) {
+    this.noise2Octaves = Math.max(1, Math.min(16, Math.round(val)));
+    this.callbacks.onNoiseParametersChanged?.();
   }
 }

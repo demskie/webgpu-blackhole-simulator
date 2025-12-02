@@ -79,43 +79,40 @@ export class RenderingManager {
     this.uniformScratch[10] = bh.discOuterFalloff;
     this.uniformScratch[11] = bh.discTexturePower;
     this.uniformScratch[12] = bh.discMinCoverage;
-    this.uniformScratch[13] = bh.discOuterTransparency;
-    this.uniformScratch[14] = bh.hazeIntensity;
+    this.uniformScratch[13] = bh.hazeIntensity;
     // Disable temporal AA when camera is moving to prevent ghosting
-    this.uniformScratch[15] =
+    this.uniformScratch[14] =
       this.hasHistory && !this.cameraMoving ? bh.getTemporalBlendWeight() : 0.0;
-    this.uniformScratch[16] = bh.cameraRotationX;
-    this.uniformScratch[17] = bh.cameraRotationY;
-    this.uniformScratch[18] = bh.brightnessFactor;
-    this.uniformScratch[19] = bh.cameraPanX;
-    this.uniformScratch[20] = bh.cameraPanY;
+    this.uniformScratch[15] = bh.cameraRotationX;
+    this.uniformScratch[16] = bh.cameraRotationY;
+    this.uniformScratch[17] = bh.brightnessFactor;
+    this.uniformScratch[18] = bh.cameraPanX;
+    this.uniformScratch[19] = bh.cameraPanY;
     // Convert degrees to radians for shader
     const DEG_TO_RAD = Math.PI / 180;
-    this.uniformScratch[21] = bh.blackHoleRotationX * DEG_TO_RAD;
-    this.uniformScratch[22] = bh.blackHoleRotationY * DEG_TO_RAD;
-    this.uniformScratch[23] = bh.blackHoleRotationZ * DEG_TO_RAD;
-    this.uniformScratch[24] = bh.stepMinScale;
-    this.uniformScratch[25] = bh.stepMaxScale;
-    this.uniformScratch[26] = bh.stepNearFactor;
-    this.uniformScratch[27] = bh.stepFarFactor;
-    // Event horizon rejection parameters
-    this.uniformScratch[28] = bh.eventHorizonRadius;
-    this.uniformScratch[29] = bh.enableEventHorizon ? 1.0 : 0.0;
+    this.uniformScratch[20] = bh.blackHoleRotationX * DEG_TO_RAD;
+    this.uniformScratch[21] = bh.blackHoleRotationY * DEG_TO_RAD;
+    this.uniformScratch[22] = bh.blackHoleRotationZ * DEG_TO_RAD;
+    this.uniformScratch[23] = bh.stepMinScale;
+    this.uniformScratch[24] = bh.stepMaxScale;
+    this.uniformScratch[25] = bh.stepNearFactor;
+    this.uniformScratch[26] = bh.stepFarFactor;
     // Palette colors + color intensity
-    this.uniformScratch[30] = bh.centerColor[0];
-    this.uniformScratch[31] = bh.centerColor[1];
-    this.uniformScratch[32] = bh.centerColor[2];
-    this.uniformScratch[33] = bh.discInnerColor[0];
-    this.uniformScratch[34] = bh.discInnerColor[1];
-    this.uniformScratch[35] = bh.discInnerColor[2];
-    // this.uniformScratch[36] = bh.discOuterColor[0];
-    // this.uniformScratch[37] = bh.discOuterColor[1];
-    // this.uniformScratch[38] = bh.discOuterColor[2];
-    this.uniformScratch[39] = bh.colorIntensity;
-    // Repurpose index 40 as color fade width; 41 stays as fade start
-    this.uniformScratch[40] = bh.colorFadeWidth;
-    this.uniformScratch[41] = bh.colorInnerToCenterPoint;
-    this.uniformScratch[42] = bh.discVerticalFalloff;
+    this.uniformScratch[27] = bh.centerColor[0];
+    this.uniformScratch[28] = bh.centerColor[1];
+    this.uniformScratch[29] = bh.centerColor[2];
+    this.uniformScratch[30] = bh.discInnerColor[0];
+    this.uniformScratch[31] = bh.discInnerColor[1];
+    this.uniformScratch[32] = bh.discInnerColor[2];
+    // discOuterColor (unused, but kept for struct alignment)
+    this.uniformScratch[33] = 1.0;
+    this.uniformScratch[34] = 1.0;
+    this.uniformScratch[35] = 1.0;
+    this.uniformScratch[36] = bh.colorIntensity;
+    this.uniformScratch[37] = bh.colorFadeWidth;
+    this.uniformScratch[38] = bh.colorInnerToCenterPoint;
+    this.uniformScratch[39] = bh.bloomVerticalFalloff;
+    this.uniformScratch[40] = bh.eventHorizonCutoff;
     device.queue.writeBuffer(
       resources.getUniformBuffer(),
       0,

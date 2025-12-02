@@ -14,7 +14,6 @@ struct Uniforms {
   discOuterFalloff: f32,
   discTexturePower: f32,
   discMinCoverage: f32,
-  discOuterTransparency: f32,
   hazeIntensity: f32,
   temporalBlendWeight: f32,
   cameraRotationX: f32,
@@ -29,9 +28,6 @@ struct Uniforms {
   stepMaxScale: f32,
   stepNearFactor: f32,
   stepFarFactor: f32,
-  // Event horizon rejection parameters
-  eventHorizonRadius: f32,
-  enableEventHorizon: f32,
   // Palette colors (added for in-shader colorization)
   centerColorR: f32,
   centerColorG: f32,
@@ -47,8 +43,10 @@ struct Uniforms {
   // Color transition thresholds along proximity t (0 outer -> 1 inner)
   colorOuterToInnerPoint: f32,
   colorInnerToCenterPoint: f32,
-  // Vertical thickness falloff at outer edge (0.0-1.0, higher = thicker clouds far from equator)
-  discVerticalFalloff: f32,
+  // Bloom vertical falloff factor
+  bloomVerticalFalloff: f32,
+  // Event Horizon Cutoff
+  eventHorizonCutoff: f32,
 }
 
 struct Resolution {
@@ -58,17 +56,15 @@ struct Resolution {
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(0) @binding(1) var<uniform> resolution: Resolution;
-@group(0) @binding(2) var noiseSampler: sampler;
-@group(0) @binding(3) var noiseTexture: texture_2d<f32>;
-@group(0) @binding(4) var proceduralSampler: sampler;
-@group(0) @binding(5) var proceduralTexture: texture_2d<f32>;
-@group(0) @binding(6) var previousFrameSampler: sampler;
-@group(0) @binding(7) var previousFrameTexture: texture_2d<f32>;
-@group(0) @binding(8) var outputTexture: texture_storage_2d<rgba16float, write>;
+@group(0) @binding(2) var proceduralSampler: sampler;
+@group(0) @binding(3) var proceduralTexture: texture_2d<f32>;
+@group(0) @binding(4) var previousFrameSampler: sampler;
+@group(0) @binding(5) var previousFrameTexture: texture_2d<f32>;
+@group(0) @binding(6) var outputTexture: texture_storage_2d<rgba16float, write>;
 // Precomputed 3D noise textures
-@group(0) @binding(9) var noise3DSampler: sampler;
-@group(0) @binding(10) var noise1Texture: texture_3d<f32>;
-@group(0) @binding(11) var noise2Texture: texture_3d<f32>;
+@group(0) @binding(7) var noise3DSampler: sampler;
+@group(0) @binding(8) var noise1Texture: texture_3d<f32>;
+@group(0) @binding(9) var noise2Texture: texture_3d<f32>;
 
 const PI: f32 = 3.14159265;
 
@@ -136,15 +132,6 @@ fn paletteTwoColor(t: f32) -> vec3<f32> {
   let inner = vec3<f32>(uniforms.discInnerColorR, uniforms.discInnerColorG, uniforms.discInnerColorB);
   let center = vec3<f32>(uniforms.centerColorR, uniforms.centerColorG, uniforms.centerColorB);
   return mix(inner, center, s);
-}
-
-fn noise(x: vec3<f32>) -> f32 {
-  let p = floor(x);
-  let f = fract(x);
-  let ff = f * f * (3.0 - 2.0 * f);
-  let uv = (p.xy + vec2<f32>(37.0, 17.0) * p.z) + ff.xy;
-  let rg = textureSampleLevel(noiseTexture, noiseSampler, (uv + 0.5) / 256.0, 0.0).yx;
-  return -1.0 + 2.0 * mix(rg.x, rg.y, ff.z);
 }
 
 fn pcurve(x: f32, a: f32, b: f32) -> f32 {
@@ -224,8 +211,9 @@ fn haze(color: ptr<function, vec3<f32>>, pos: vec3<f32>, alpha: f32, stepWeight:
   let hazeAmount = bloomDisc * uniforms.hazeIntensity * stepWeight * (1.0 - alpha * 1.0);
 
   // Calculate radial gradient for color based on distance from disc center
-  let discInner = uniforms.discRadius - uniforms.discWidth * 0.5;
-  let discOuter = uniforms.discRadius + uniforms.discWidth * 0.5;
+  // discRadius = inner edge (near black hole), discWidth = how far outward the disc extends
+  let discInner = max(0.1, uniforms.discRadius);
+  let discOuter = uniforms.discRadius + uniforms.discWidth;
   let distFromCenter = length(pos.xz); // Distance in the disc plane
   let normalizedRadial = saturate_f32((distFromCenter - discInner) / (discOuter - discInner));
   let radialGradient = 1.0 - normalizedRadial;
@@ -236,8 +224,9 @@ fn haze(color: ptr<function, vec3<f32>>, pos: vec3<f32>, alpha: f32, stepWeight:
 }
 
 fn gasDisc(color: ptr<function, vec3<f32>>, alpha: ptr<function, f32>, pos: vec3<f32>, invIterations: f32) {
-  let discInner = uniforms.discRadius - uniforms.discWidth * 0.5;
-  let discOuter = uniforms.discRadius + uniforms.discWidth * 0.5;
+  // discRadius = inner edge (near black hole), discWidth = how far outward the disc extends
+  let discInner = max(0.1, uniforms.discRadius);
+  let discOuter = uniforms.discRadius + uniforms.discWidth;
 
   let origin = vec3<f32>(0.0, 0.0, 0.0);
   let discNormal = vec3<f32>(0.0, 1.0, 0.0);
@@ -248,7 +237,10 @@ fn gasDisc(color: ptr<function, vec3<f32>>, alpha: ptr<function, f32>, pos: vec3
 
   // Early rejection: quick bounds test before expensive shaping/noise
   let margin = uniforms.discThickness * 3.0; // Conservative margin for bloom/haze effects
-  if (distFromCenter < discInner - margin || distFromCenter > discOuter + margin) { return; }
+
+  // Fix: Clamp the lower bound to avoid negative distance checks (sampling inside event horizon)
+  // We use discInner * 0.25 as a hard limit for the event horizon visual
+  if (distFromCenter < max(discInner * 0.25, discInner - margin) || distFromCenter > discOuter + margin) { return; }
   if (abs(distFromDisc) > margin) { return; }
 
   // Normalize radial position across the full disc width: 0 at outer edge, 1 at inner edge
@@ -257,9 +249,7 @@ fn gasDisc(color: ptr<function, vec3<f32>>, alpha: ptr<function, f32>, pos: vec3
   var coverage = pcurve(radialGradient, 4.0, 0.9);
 
   // Use full thickness for vertical falloff so clouds far from equator aren't cut off
-  // Apply gentle tapering (sqrt) for visual effect without harsh darkening at outer edge
-  let verticalThickness = discThickness * mix(uniforms.discVerticalFalloff, 1.0, sqrt(radialGradient));
-  coverage *= saturate_f32(1.0 - abs(distFromDisc) / verticalThickness);
+  coverage *= saturate_f32(1.0 - abs(distFromDisc) / discThickness);
 
   // Separate visual tapering for the disc edge appearance (doesn't affect vertical coverage)
   discThickness = max(0.35 * uniforms.discThickness, discThickness * radialGradient);
@@ -273,7 +263,9 @@ fn gasDisc(color: ptr<function, vec3<f32>>, alpha: ptr<function, f32>, pos: vec3
   let t = abs(distFromCenter - discInner) + 0.4;
   let t2 = t * t;
   let fade = (t2 * t2) * 0.04;
-  let bloomFactor = 1.0 / (distFromDisc * distFromDisc * 40.0 + fade + 0.00002);
+  // Normalize vertical distance by disc thickness so bloom scales with thickness
+  let normalizedVerticalDist = distFromDisc / max(0.01, uniforms.discThickness);
+  let bloomFactor = 1.0 / (normalizedVerticalDist * normalizedVerticalDist * uniforms.bloomVerticalFalloff + fade + 0.00002);
   var bloomIntensity = bloomFactor * sqrt(bloomFactor);
 
   // Mix dust and bloom intensities
@@ -283,7 +275,10 @@ fn gasDisc(color: ptr<function, vec3<f32>>, alpha: ptr<function, f32>, pos: vec3
   if (coverage < 0.01) { return; }
 
   var radialCoords: vec3<f32>;
-  radialCoords.x = distFromCenter * 1.5 + 0.55;
+  // Normalize radial position to disc bounds so texture tiles consistently regardless of disc width
+  let discWidthActual = max(0.1, discOuter - discInner);
+  let normalizedDist = (distFromCenter - discInner) / discWidthActual; // 0 at inner, 1 at outer
+  radialCoords.x = normalizedDist * 6.0 + 0.55; // Scale to reasonable texture coordinate range
   radialCoords.y = atan2(-pos.x, -pos.z) * 1.5;
   radialCoords.z = distFromDisc * 1.5;
   radialCoords *= 0.95;
@@ -291,7 +286,7 @@ fn gasDisc(color: ptr<function, vec3<f32>>, alpha: ptr<function, f32>, pos: vec3
   let speed = uniforms.discSpeed;
 
   // Convert to texture coordinates for 3D lookup
-  // X: radial distance (0 to 8 mapped to 0-1)
+  // X: radial distance normalized to disc width (scales with disc size)
   // Y: angular position with time-based rotation (wrapped)
   // Z: vertical distance (-2 to 2 mapped to 0-1)
   var lookupCoords: vec3<f32>;
@@ -317,12 +312,9 @@ fn gasDisc(color: ptr<function, vec3<f32>>, alpha: ptr<function, f32>, pos: vec3
   dustIntensity = max(0.0, dustIntensity);
   coverage *= pcurve(radialGradient, uniforms.discInnerFalloff, uniforms.discOuterFalloff);
 
-  // Apply outer edge transparency to eliminate black shadow
+  // Apply soft fade at outer edges to eliminate black shadow
   // radialGradient is 1.0 at inner edge, 0.0 at outer edge
-  // So we want to fade out when radialGradient approaches 0
-  // Soften the fade so the rim doesn't vanish too quickly
-  let outerFade = mix(uniforms.discOuterTransparency, 1.0, pow(radialGradient, 0.5));
-  coverage *= outerFade;
+  coverage *= pow(radialGradient, 0.5);
 
   // Accumulate color using palette based on radial position (inner->outer)
   let tint = paletteTwoColor(radialGradient);
@@ -407,14 +399,21 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     // Distance-based adaptive step scaling
     let r = length(raypos);
 
-    let rNear = max(0.5, uniforms.discRadius - uniforms.discWidth * uniforms.stepNearFactor);
-    let rFar  = uniforms.discRadius + uniforms.discWidth * uniforms.stepFarFactor;
+    // With new parameterization: discRadius = inner edge, discWidth = outward extent
+    let discInnerStep = max(0.1, uniforms.discRadius);
+    let discOuterStep = uniforms.discRadius + uniforms.discWidth;
+    let rNear = max(0.5, discInnerStep * uniforms.stepNearFactor);
+    let rFar  = discOuterStep + discOuterStep * uniforms.stepFarFactor * 0.2;
     let t = smoothstep(rNear, rFar, r);
     let stepScale = mix(uniforms.stepMinScale, uniforms.stepMaxScale, t);
     let localStep = baseStep * stepScale;
     let stepWeight = invIterations * stepScale; // equals localStep / far
 
     warpSpace(&eyevec, &raypos, localStep);
+
+    // Explicit Event Horizon check: Stop rays that fall into the black hole
+    // This prevents artifacts when warp is low and rays penetrate the center
+    if (length(raypos) < max(0.1, uniforms.discRadius * uniforms.eventHorizonCutoff)) { break; }
 
     let rotatedPos = rotBH * raypos;
     gasDisc(&accumColor, &alpha, rotatedPos, stepWeight);

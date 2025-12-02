@@ -48,6 +48,7 @@ export class BlackholeSimulator {
         onToneParametersChanged: () => this.updateToneParameters(),
         onBloomParametersChanged: () => this.updateBloomParameters(),
         onTemperatureChanged: () => this.updateProceduralTexture(),
+        onNoiseParametersChanged: () => this.regenerateNoiseTextures(),
       }
     );
 
@@ -126,6 +127,10 @@ export class BlackholeSimulator {
 
   private updateProceduralTexture() {
     this.resources.regenerateProceduralTexture();
+  }
+
+  private regenerateNoiseTextures() {
+    this.resources.blackholeCompute.regenerateNoiseTextures();
   }
 
   private update(currentTime: number) {

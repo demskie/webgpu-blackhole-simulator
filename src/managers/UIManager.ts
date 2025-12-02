@@ -152,14 +152,6 @@ export class UIManager {
       "stepFarFactor"
     );
 
-    // Event horizon controls
-    this.initializeSlider(
-      "slEventHorizonRadius",
-      "labelEventHorizonRadius",
-      "eventHorizonRadius"
-    );
-    this.initializeCheckbox("cbEnableEventHorizon", "enableEventHorizon");
-
     // Black Hole Rotation sliders (degrees)
     this.initializeRotationSlider(
       "slBlackholeRotationX",
@@ -185,9 +177,14 @@ export class UIManager {
       "discThickness"
     );
     this.initializeSlider(
-      "slDiscVerticalFalloff",
-      "labelDiscVerticalFalloff",
-      "discVerticalFalloff"
+      "slBloomVerticalFalloff",
+      "labelBloomVerticalFalloff",
+      "bloomVerticalFalloff"
+    );
+    this.initializeSlider(
+      "slEventHorizonCutoff",
+      "labelEventHorizonCutoff",
+      "eventHorizonCutoff"
     );
     this.initializeSlider("slDiscSpeed", "labelDiscSpeed", "discSpeed");
     this.initializeSlider(
@@ -240,14 +237,19 @@ export class UIManager {
       "discMinCoverage"
     );
     this.initializeSlider(
-      "slDiscOuterTransparency",
-      "labelDiscOuterTransparency",
-      "discOuterTransparency"
-    );
-    this.initializeSlider(
       "slHazeIntensity",
       "labelHazeIntensity",
       "hazeIntensity"
+    );
+    this.initializeSlider(
+      "slNoise1Octaves",
+      "labelNoise1Octaves",
+      "noise1Octaves"
+    );
+    this.initializeSlider(
+      "slNoise2Octaves",
+      "labelNoise2Octaves",
+      "noise2Octaves"
     );
     this.initializeSlider(
       "slMaxFrameRate",

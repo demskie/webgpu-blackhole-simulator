@@ -24,8 +24,6 @@ export class ResourceManager {
   private bufferAView: GPUTextureView | null = null;
   private sampler: GPUSampler | null = null;
   private repeatSampler: GPUSampler | null = null;
-  private noiseTexture: GPUTexture | null = null;
-  private noiseView: GPUTextureView | null = null;
   private proceduralTexture: GPUTexture | null = null;
   private proceduralView: GPUTextureView | null = null;
   private bufferWidth: number = 0;
@@ -82,7 +80,7 @@ export class ResourceManager {
       addressModeV: "clamp-to-edge",
     });
 
-    // Create repeat sampler for noise and procedural textures (matching WebGL2)
+    // Create repeat sampler for procedural textures (matching WebGL2)
     this.repeatSampler = device.createSampler({
       label: "repeatSampler",
       minFilter: "linear",
@@ -95,8 +93,7 @@ export class ResourceManager {
     this.textureCompute.setup();
     this.blackholeCompute.setup();
 
-    // Create noise and procedural textures using compute shaders
-    this.createNoiseTexture(device);
+    // Create procedural texture using compute shader
     this.createProceduralTexture(device);
 
     // Setup HDR/Bloom/ToneMap resources
@@ -138,116 +135,12 @@ export class ResourceManager {
     }
   }
 
-  private createNoiseTexture(device: GPUDevice) {
-    console.log(`🟠 createNoiseTexture() using compute shader`);
-    const size = 256;
-
-    // Create temporary staging buffer for conversion
-    const stagingBuffer = device.createBuffer({
-      label: "noiseStagingBuffer",
-      size: size * size * 4, // RGBA8 = 4 bytes per pixel
-      usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
-    });
-
-    // Generate noise data using compute shader (outputs to f32 storage buffer)
-    this.textureCompute.generateNoiseTexture();
-
-    // Create texture to hold the result (keep as rgba8unorm for filtering support)
-    this.noiseTexture = device.createTexture({
-      label: "noiseTexture",
-      size: [size, size],
-      format: "rgba8unorm",
-      mipLevelCount: 1, // Single level to avoid undefined behavior
-      usage:
-        GPUTextureUsage.TEXTURE_BINDING |
-        GPUTextureUsage.COPY_DST |
-        GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-
-    // Use a compute shader or render pass to convert from f32 to unorm
-    // For now, let's use a simple render pass approach
-    const conversionShader = device.createShaderModule({
-      code: `
-        @group(0) @binding(0) var<storage, read> inputData: array<vec4<f32>>;
-
-        @vertex
-        fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4<f32> {
-          var pos = array<vec2<f32>, 3>(
-            vec2<f32>(-1.0, -1.0),
-            vec2<f32>(-1.0,  3.0),
-            vec2<f32>( 3.0, -1.0)
-          );
-          return vec4<f32>(pos[vertexIndex], 0.0, 1.0);
-        }
-
-        @fragment
-        fn fragmentMain(@builtin(position) pos : vec4<f32>) -> @location(0) vec4<f32> {
-          let x = u32(pos.x);
-          let y = u32(pos.y);
-          let index = y * 256u + x;
-          return inputData[index];
-        }
-      `,
-    });
-
-    const conversionPipeline = device.createRenderPipeline({
-      layout: "auto",
-      vertex: { module: conversionShader, entryPoint: "vertexMain" },
-      fragment: {
-        module: conversionShader,
-        entryPoint: "fragmentMain",
-        targets: [{ format: "rgba8unorm" }],
-      },
-      primitive: { topology: "triangle-list" },
-    });
-
-    const bindGroup = device.createBindGroup({
-      layout: conversionPipeline.getBindGroupLayout(0),
-      entries: [
-        {
-          binding: 0,
-          resource: { buffer: this.textureCompute.getNoiseStorageBuffer() },
-        },
-      ],
-    });
-
-    const commandEncoder = device.createCommandEncoder();
-    const passEncoder = commandEncoder.beginRenderPass({
-      colorAttachments: [
-        {
-          view: this.noiseTexture.createView(),
-          loadOp: "clear",
-          storeOp: "store",
-          clearValue: { r: 0, g: 0, b: 0, a: 0 },
-        },
-      ],
-    });
-
-    passEncoder.setPipeline(conversionPipeline);
-    passEncoder.setBindGroup(0, bindGroup);
-    passEncoder.draw(3, 1, 0, 0);
-    passEncoder.end();
-
-    device.queue.submit([commandEncoder.finish()]);
-
-    // Clean up staging buffer
-    stagingBuffer.destroy();
-
-    this.noiseView = this.noiseTexture.createView({ label: "noiseView" });
-  }
-
   private createProceduralTexture(device: GPUDevice) {
     console.log(`🟠 createProceduralTexture() using compute shader`);
     const size = 512;
 
-    // Generate procedural data using compute shader with temperature parameters
-    const bh = this.simulator.blackHole;
-    this.textureCompute.generateProceduralTexture(
-      bh.discTemperature,
-      bh.discTemperatureRadiusFactor,
-      bh.discMinColorTemperature,
-      bh.discMaxColorTemperature
-    );
+    // Generate procedural noise data using compute shader
+    this.textureCompute.generateProceduralTexture();
 
     // Create texture with mipmaps (keep as rgba8unorm for filtering support)
     const mipLevelCount = Math.floor(Math.log2(size)) + 1;
@@ -371,10 +264,6 @@ export class ResourceManager {
     return this.repeatSampler!;
   }
 
-  getNoiseView(): GPUTextureView {
-    return this.noiseView!;
-  }
-
   getProceduralView(): GPUTextureView {
     return this.proceduralView!;
   }
@@ -400,20 +289,12 @@ export class ResourceManager {
   }
 
   regenerateProceduralTexture() {
-    console.log(
-      `🟠 regenerateProceduralTexture() with temperature ${this.simulator.blackHole.discTemperature}`
-    );
+    console.log(`🟠 regenerateProceduralTexture()`);
     const device = this.simulator.device;
     const size = 512;
 
-    // Generate procedural data using compute shader with updated temperature parameters
-    const bh = this.simulator.blackHole;
-    this.textureCompute.generateProceduralTexture(
-      bh.discTemperature,
-      bh.discTemperatureRadiusFactor,
-      bh.discMinColorTemperature,
-      bh.discMaxColorTemperature
-    );
+    // Generate procedural noise data using compute shader
+    this.textureCompute.generateProceduralTexture();
 
     // Use a render pass to convert from f32 storage to rgba8unorm texture
     const conversionShader = device.createShaderModule({
@@ -601,11 +482,6 @@ export class ResourceManager {
       this.previousFrameTexture.destroy();
       this.previousFrameTexture = null;
       this.previousFrameView = null;
-    }
-    if (this.noiseTexture) {
-      this.noiseTexture.destroy();
-      this.noiseTexture = null;
-      this.noiseView = null;
     }
     if (this.proceduralTexture) {
       this.proceduralTexture.destroy();
